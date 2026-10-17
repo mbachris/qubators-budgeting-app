@@ -2,7 +2,7 @@
 // v2 model: allocations are DEDUCTIONS off each income; spending is against
 // user-defined expense categories inside a monthly pot.
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const DDL = `
 CREATE TABLE IF NOT EXISTS allocation_rules (
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS income_entries (
 );
 CREATE TABLE IF NOT EXISTS expense_categories (
   id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'daily',
-  default_amount_minor INTEGER NOT NULL DEFAULT 0, due_day INTEGER,
+  default_amount_minor INTEGER NOT NULL DEFAULT 0, target_minor INTEGER NOT NULL DEFAULT 0, due_day INTEGER,
   sort INTEGER NOT NULL DEFAULT 0,
   user_id TEXT, updated_at INTEGER NOT NULL, is_deleted INTEGER NOT NULL DEFAULT 0, rev INTEGER NOT NULL DEFAULT 1
 );
@@ -59,9 +59,11 @@ export const SEED_ALLOCATION_RULES = [
   { id: "living", name: "Spendable (Living)", percent: 65, kind: "living", sort: 4 },
 ];
 
-// Seed spending categories — two lists: fixed monthly bills, everyday spending.
-// Bills start at 0: the first time you pay one you type the amount, and it is
-// remembered for every following month.
+// Seed spending categories — three lists:
+//   bill  → fixed every month (amount remembered after the first payment)
+//   daily → everyday spending
+//   goal  → planned purchases with their own name and target (a car, a trip) —
+//           created by the user, never seeded.
 export const SEED_EXPENSE_CATEGORIES = [
   { id: "rent", name: "Rent / Housing", kind: "bill", dueDay: 1, sort: 0 },
   { id: "utilities", name: "Water & Electricity", kind: "bill", dueDay: 5, sort: 1 },

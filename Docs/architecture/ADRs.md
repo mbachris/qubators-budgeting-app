@@ -17,8 +17,12 @@
 - Tithe, savings and emergency are **given by default** the moment income arrives (no user action);
   only community giving is tracked, under exactly two categories: `ceremonies` and `society`.
 - Expenses belong to a month pot (`period = YYYY-MM`) and to a user-defined `expense_categories`
-  row of kind `bill` (fixed monthly, amount remembered) or `daily`.
+  row of kind `bill` (fixed monthly, amount remembered), `daily` (everyday), or `goal`
+  (a planned purchase such as a car or a trip, with its own name and optional `target_minor`).
+- A `goal` is spending, not a budget: it draws on the month's spendable pot like any other expense,
+  but its running total accumulates across months so the plan can be measured against its target.
 - Rejected: treating buckets as spending budgets (mixes two different ideas); one global spendable
-  balance (loses the per-month story); asking the user to confirm tithes/savings every month (noise).
-- Dev note: model changes bumped phone `PRAGMA user_version` (v2 reset, v3/v4 additive ALTERs) and server
-  `sql/002_model_v2.sql` drops the v1 domain tables.
+  balance (loses the per-month story); asking the user to confirm tithes/savings every month (noise);
+  filing a car or a trip under "everyday spending" (hides a multi-month plan inside a daily list).
+- Dev note: model changes bumped phone `PRAGMA user_version` (v2 reset, later additive ALTERs run on
+  every launch) and server `sql/002_model_v2.sql` drops the v1 domain tables.

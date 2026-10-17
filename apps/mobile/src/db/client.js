@@ -67,6 +67,7 @@ async function seed(db) {
 const EXPECTED_COLUMNS = {
   payouts: { category: "TEXT" },
   income_entries: { emergency_minor: "INTEGER NOT NULL DEFAULT 0" },
+  expense_categories: { target_minor: "INTEGER NOT NULL DEFAULT 0" },
 };
 
 // `PRAGMA table_info(...)` proved unreliable through the prepared-statement API, so
@@ -131,6 +132,7 @@ async function verifySchema(db) {
   const probes = [
     "SELECT emergency_minor FROM income_entries LIMIT 1",
     "SELECT category FROM payouts LIMIT 1",
+    "SELECT target_minor FROM expense_categories LIMIT 1",
     "SELECT period FROM expenses LIMIT 1",
   ];
   for (const sql of probes) {

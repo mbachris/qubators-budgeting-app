@@ -3,29 +3,36 @@ import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { light, formatMoney } from "../theme/tokens";
 import { periodLabel } from "../lib/period";
 
+const KIND_LABEL = { bill: "Bill", goal: "Planned", daily: "Everyday" };
+const minorOf = (text) => Math.round((Number(String(text).replace(/[^0-9.]/g, "")) || 0) * 100);
+
 export default function Spend({
-  period, bills = [], categories = [], expenses = [], onSaveExpense, onAddCategory,
-  onPayBill, onDeleteExpense,
+  period, bills = [], goals = [], categories = [], expenses = [],
+  onSaveExpense, onAddCategory, onPayBill, onAddToGoal, onDeleteExpense,
 }) {
   const daily = categories.filter((c) => c.kind === "daily");
   const [amounts, setAmounts] = useState({});
+  const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState(daily[0]?.id ?? "food");
-  const [val, setVal] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [newName, setNewName] = useState("");
   const [newKind, setNewKind] = useState("daily");
+  const [newTarget, setNewTarget] = useState("");
 
-  // Bills are pre-filled with last month's amount, so paying is one tap.
+  // Bills and planned purchases are pre-filled, so logging is one tap.
   useEffect(() => {
     const next = {};
     for (const b of bills) next[b.id] = String((b.lastMinor || b.defaultAmountMinor || 0) / 100);
+    for (const g of goals) {
+      const remaining = Math.max(0, (g.targetMinor ?? 0) - g.spentMinor);
+      next[g.id] = String((remaining || g.lastMinor || 0) / 100);
+    }
     setAmounts(next);
-  }, [bills]);
+  }, [bills, goals]);
 
-  const minorOf = (text) => Math.round((Number(String(text).replace(/[^0-9.]/g, "")) || 0) * 100);
-  const minor = minorOf(val);
+  const minor = minorOf(amount);
 
   return (
     <View>
@@ -67,6 +74,78 @@ export default function Spend({
         </View>
       ))}
 
+      <Text style={s.section}>Planned purchases</Text>
+      <Text style={s.m}>
+        A car, a trip, a big repair. Each keeps its own name, its own target and its own running
+        total — it is not an everyday expense and not a monthly bill.
+      </Text>
+      {goals.length === 0 && (
+        <Text style={s.sub}>
+          Nothing planned yet. Add one below and choose “Planned purchase”.
+        </Text>
+      )}
+      {goals.map((g) => {
+        const target = g.targetMinor ?? 0;
+        const pct = target > 0 ? Math.min(100, Math.round((g.spentMinor / target) * 100)) : 0;
+        const remaining = Math.max(0, target - g.spentMinor);
+        const done = target > 0 && g.spentMinor >= target;
+        return (
+          <View key={g.id} style={s.card}>
+            <View style={s.rowBetween}>
+              <Text style={s.t}>{g.name}</Text>
+              <Text style={[s.due, done && { color: light.primary, fontWeight: "700" }]}>
+                {done ? "target reached ✓" : target > 0 ? `${pct}%` : `${g.payments} payment${g.payments === 1 ? "" : "s"}`}
+              </Text>
+            </View>
+
+            <Text style={s.moneyBig}>
+              {formatMoney(g.spentMinor)}
+              {target > 0 ? <Text style={s.moneyOf}> of {formatMoney(target)}</Text> : null}
+            </Text>
+            {target > 0 && (
+              <>
+                <View style={s.barTrack}>
+                  <View style={[s.barFill, done && { backgroundColor: light.primary }, { width: `${pct}%` }]} />
+                </View>
+                <Text style={s.due}>
+                  {done ? "Plan complete." : `${formatMoney(remaining)} still to go`}
+                  {g.spentThisMonthMinor > 0 ? ` • ${formatMoney(g.spentThisMonthMinor)} this month` : ""}
+                </Text>
+              </>
+            )}
+            {target === 0 && g.spentThisMonthMinor > 0 && (
+              <Text style={s.due}>{formatMoney(g.spentThisMonthMinor)} this month • no target set</Text>
+            )}
+
+            <View style={s.payRow}>
+              <TextInput
+                style={[s.in, s.inPay]}
+                keyboardType="numeric"
+                value={amounts[g.id] ?? ""}
+                onChangeText={(v) => setAmounts((a) => ({ ...a, [g.id]: v }))}
+                placeholder="Amount (BIF)"
+              />
+              <Pressable
+                style={[s.btn, s.btnPay, busy && s.off]}
+                disabled={busy || minorOf(amounts[g.id]) <= 0}
+                onPress={async () => {
+                  const amt = minorOf(amounts[g.id]);
+                  if (amt <= 0) return;
+                  setBusy(true);
+                  try {
+                    await onAddToGoal({ categoryId: g.id, amountMinor: amt, note: g.name });
+                    setAmounts((a) => ({ ...a, [g.id]: "" }));
+                    setMsg(`${g.name}: added ${formatMoney(amt)}.`);
+                  } finally { setBusy(false); }
+                }}
+              >
+                <Text style={s.bt}>Add</Text>
+              </Pressable>
+            </View>
+          </View>
+        );
+      })}
+
       <Text style={s.section}>Everyday spending</Text>
       <View style={s.chips}>
         {daily.map((c) => (
@@ -95,8 +174,8 @@ export default function Spend({
         <TextInput
           style={[s.in, s.inPay]}
           keyboardType="numeric"
-          value={val}
-          onChangeText={setVal}
+          value={amount}
+          onChangeText={setAmount}
           placeholder="Amount (BIF)"
         />
         <Pressable
@@ -107,7 +186,7 @@ export default function Spend({
             setBusy(true);
             try {
               await onSaveExpense({ categoryId, amountMinor: minor, note: note.trim() || null });
-              setVal("");
+              setAmount("");
               setNote("");
               setMsg(`Logged ${formatMoney(minor)}.`);
             } finally { setBusy(false); }
@@ -121,26 +200,47 @@ export default function Spend({
       <Text style={s.section}>New category</Text>
       <TextInput
         style={s.in}
-        placeholder="e.g. Baby needs"
+        placeholder="e.g. Car, Trip to Nairobi, Baby needs"
         value={newName}
         onChangeText={setNewName}
       />
       <View style={s.chips}>
-        {[["daily", "Everyday"], ["bill", "Bill (monthly)"]].map(([k, label]) => (
+        {[["daily", "Everyday"], ["bill", "Bill (monthly)"], ["goal", "Planned purchase"]].map(([k, label]) => (
           <Pressable key={k} style={[s.chip, newKind === k && s.chipOn]} onPress={() => setNewKind(k)}>
             <Text style={[s.chipT, newKind === k && s.chipTOn]}>{label}</Text>
           </Pressable>
         ))}
       </View>
+      {newKind === "goal" && (
+        <>
+          <Text style={s.label}>Target amount (optional)</Text>
+          <TextInput
+            style={s.in}
+            keyboardType="numeric"
+            placeholder="e.g. 15000000 for the car"
+            value={newTarget}
+            onChangeText={setNewTarget}
+          />
+          <Text style={s.m}>
+            The target is just your plan — you can add money to it month after month.
+          </Text>
+        </>
+      )}
       <Pressable
         style={[s.btnGhost, (busy || !newName.trim()) && s.off]}
         disabled={busy || !newName.trim()}
         onPress={async () => {
           setBusy(true);
           try {
-            await onAddCategory({ name: newName.trim(), kind: newKind });
-            setNewName("");
+            await onAddCategory({
+              name: newName.trim(),
+              kind: newKind,
+              targetMinor: newKind === "goal" ? minorOf(newTarget) : 0,
+            });
             setMsg(`Category "${newName.trim()}" added.`);
+            setNewName("");
+            setNewTarget("");
+            setNewKind("daily");
           } finally { setBusy(false); }
         }}
       >
@@ -154,7 +254,7 @@ export default function Spend({
           <View style={{ flex: 1, paddingRight: 8 }}>
             <Text style={s.lineT}>{e.categoryName ?? e.categoryId}</Text>
             <Text style={s.due}>
-              {e.note ? `${e.note} • ` : ""}{e.categoryKind === "bill" ? "Bill" : "Everyday"}
+              {e.note ? `${e.note} • ` : ""}{KIND_LABEL[e.categoryKind] ?? "Everyday"}
             </Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -179,7 +279,11 @@ const s = StyleSheet.create({
   card: { backgroundColor: light.surface, borderWidth: 1, borderColor: light.border, borderRadius: 16, padding: 12, marginTop: 8 },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   t: { fontWeight: "600" },
-  due: { color: light.text2, fontSize: 12 },
+  due: { color: light.text2, fontSize: 12, marginTop: 2 },
+  moneyBig: { fontSize: 20, fontWeight: "800", fontVariant: ["tabular-nums"], marginTop: 4 },
+  moneyOf: { fontSize: 13, fontWeight: "600", color: light.text2 },
+  barTrack: { height: 8, backgroundColor: light.surface2, borderRadius: 999, marginTop: 8, overflow: "hidden" },
+  barFill: { height: 8, borderRadius: 999, backgroundColor: light.accent },
   payRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
   in: { height: 48, borderWidth: 1, borderColor: light.border, borderRadius: 12, paddingHorizontal: 14, marginTop: 8, backgroundColor: light.surface },
   inPay: { flex: 1, marginTop: 0, fontVariant: ["tabular-nums"] },
@@ -190,7 +294,7 @@ const s = StyleSheet.create({
   chipTOn: { color: "#fff", fontWeight: "700" },
   btn: { backgroundColor: light.primary, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center" },
   btnPay: { width: 84, marginLeft: 8 },
-  btnGhost: { borderWidth: 1, borderColor: light.border, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", marginTop: 8, backgroundColor: light.surface },
+  btnGhost: { borderWidth: 1, borderColor: light.border, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", marginTop: 12, backgroundColor: light.surface },
   off: { opacity: 0.4 },
   bt: { color: "#fff", fontWeight: "700" },
   btGhost: { color: light.text, fontWeight: "700" },

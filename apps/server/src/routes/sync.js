@@ -14,7 +14,7 @@ const COLUMNS = {
     "user_id", "updated_at", "is_deleted", "rev",
   ],
   expense_categories: [
-    "id", "name", "kind", "default_amount_minor", "due_day", "sort",
+    "id", "name", "kind", "default_amount_minor", "target_minor", "due_day", "sort",
     "user_id", "updated_at", "is_deleted", "rev",
   ],
   expenses: ["id", "category_id", "period", "amount_minor", "note", "occurred_at", "user_id", "updated_at", "is_deleted", "rev"],

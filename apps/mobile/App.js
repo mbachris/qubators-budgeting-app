@@ -6,7 +6,7 @@ import {
   listIncomeByPeriod, listExpenseCategories, listExpensesByPeriod, expenseTotalsByCategory,
   billRows, listAllocationRules, listProjects, listPayouts, periodSummary, lifetimeTotals,
   addIncome, addExpense, deleteExpense, addExpenseCategory, setCategoryDefault, addPayout,
-  queueCount,
+  goalRows, queueCount,
 } from "./src/db/repo";
 import { resetDB } from "./src/db/client";
 import { currentPeriod, stampInPeriod } from "./src/lib/period";
@@ -34,6 +34,7 @@ function AppShell() {
   const [expenses, setExpenses] = useState([]);
   const [categoryTotals, setCategoryTotals] = useState([]);
   const [bills, setBills] = useState([]);
+  const [goals, setGoals] = useState([]);
   const [categories, setCategories] = useState([]);
   const [rules, setRules] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -60,7 +61,7 @@ function AppShell() {
 
   const refresh = useCallback(async () => {
     const [
-      summ, inc, cats, exp, totals, billsNow, ruleList, projs, paid, life, q, token,
+      summ, inc, cats, exp, totals, billsNow, ruleList, projs, paid, life, q, token, goalsNow,
     ] = await Promise.all([
       periodSummary(period),
       listIncomeByPeriod(period),
@@ -74,10 +75,11 @@ function AppShell() {
       lifetimeTotals(),
       queueCount(),
       getToken(),
+      goalRows(period),
     ]);
     setSummary(summ); setIncomes(inc); setCategories(cats); setExpenses(exp);
     setCategoryTotals(totals); setBills(billsNow); setRules(ruleList); setProjects(projs);
-    setPayouts(paid); setLifetime(life); setPending(q); setOnline(!!token);
+    setPayouts(paid); setLifetime(life); setPending(q); setOnline(!!token); setGoals(goalsNow);
   }, [period]);
 
   useEffect(() => {
@@ -94,7 +96,7 @@ function AppShell() {
 
   const props = {
     period, initialPeriod: period, setPeriod, summary, incomes, expenses, categoryTotals, bills,
-    categories, rules,
+    goals, categories, rules,
     projects, payouts: payouts.filter((p) => p.bucket === "community"),
     lifetime, pending, online, setOnline, go: setTab, refresh,
 
@@ -121,8 +123,14 @@ function AppShell() {
       await refresh();
     }),
 
-    onAddCategory: action("Adding the category", async ({ name, kind }) => {
-      await addExpenseCategory({ name, kind });
+    onAddCategory: action("Adding the category", async ({ name, kind, targetMinor }) => {
+      await addExpenseCategory({ name, kind, targetMinor });
+      await refresh();
+    }),
+
+    // Planned purchases are spending like any other: they draw on the month's pot.
+    onAddToGoal: action("Adding to the plan", async ({ categoryId, amountMinor, note }) => {
+      await addExpense({ categoryId, amountMinor, note, period });
       await refresh();
     }),
 

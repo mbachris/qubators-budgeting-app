@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — planned purchases (car, trip, big buys)
+
+- New category kind **`goal`** = *Planned purchase*: a car, a trip, a big repair. It is its own item
+  with its own name, an optional **target amount**, and a **running total across months** — separate
+  from everyday spending and from monthly bills.
+- **Spend → Planned purchases**: each plan shows spent vs target, a progress bar, what is still to go
+  and what was added this month; the amount box is pre-filled with the remaining-to-target for one-tap
+  logging.
+- **Home → Planned purchases card** shows every plan's progress, with *Add to a plan* jumping to Spend.
+- New category form gained a third choice (**Planned purchase**) plus an optional target field.
+- Expense rows now label their kind: *Bill*, *Everyday* or *Planned*.
+- Phone schema **v5** adds `expense_categories.target_minor` (added on launch for existing databases,
+  no reset); server `002` and the sync whitelist carry it too.
+
 ## Unreleased — crash fix, named expenses, nicer tips
 
 - **Fixed the native crash** `NativeDatabase.prepareAsync … NullPointerException`: expo-sqlite rejects

@@ -10,8 +10,10 @@ const KIND_LABEL = {
   living: "Spendable (Living)",
 };
 
+const EXPENSE_KIND = { bill: "Bill", goal: "Planned", daily: "Everyday" };
+
 export default function Home({
-  period, summary, bills, rules = [], categoryTotals = [], expenses = [], lifetime,
+  period, summary, bills, goals = [], rules = [], categoryTotals = [], expenses = [], lifetime,
   payouts = [], pending = 0, online, setPeriod, go, onDeleteExpense,
 }) {
   const cur = currentPeriod();
@@ -159,6 +161,48 @@ export default function Home({
         </>
       )}
 
+      {goals.length > 0 && (
+        <>
+          <Text style={s.h}>Planned purchases</Text>
+          <View style={s.card}>
+            {goals.map((g) => {
+              const target = g.targetMinor ?? 0;
+              const pct = target > 0 ? Math.min(100, Math.round((g.spentMinor / target) * 100)) : 0;
+              return (
+                <View key={g.id} style={{ marginBottom: 12 }}>
+                  <View style={s.rowBetween}>
+                    <Text style={s.t}>{g.name}</Text>
+                    <Text style={s.money}>
+                      {formatMoney(g.spentMinor)}
+                      {target > 0 ? ` / ${formatMoney(target)}` : ""}
+                    </Text>
+                  </View>
+                  {target > 0 ? (
+                    <>
+                      <View style={s.barTrack}>
+                        <View style={[s.barFill, { width: `${pct}%`, backgroundColor: light.accent }]} />
+                      </View>
+                      <Text style={s.hint}>
+                        {g.spentMinor >= target
+                          ? "Plan complete ✓"
+                          : `${pct}% • ${formatMoney(target - g.spentMinor)} still to go`}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={s.hint}>
+                      {g.payments} payment{g.payments === 1 ? "" : "s"} • no target set
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
+            <Pressable style={s.miniBtn} onPress={() => go("spend")}>
+              <Text style={s.miniBtnT}>Add to a plan</Text>
+            </Pressable>
+          </View>
+        </>
+      )}
+
       {categoryTotals.length > 0 && (
         <>
           <Text style={s.h}>Spending by category</Text>
@@ -183,7 +227,7 @@ export default function Home({
           <View style={{ flex: 1, paddingRight: 8 }}>
             <Text style={s.lineT}>{e.categoryName ?? e.categoryId}</Text>
             <Text style={s.due}>
-              {e.note ? `${e.note} • ` : ""}{e.categoryKind === "bill" ? "Bill" : "Everyday"}
+              {e.note ? `${e.note} • ` : ""}{EXPENSE_KIND[e.categoryKind] ?? "Everyday"}
             </Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center" }}>

@@ -44,12 +44,14 @@ CREATE TABLE income_entries (
   rev INTEGER NOT NULL DEFAULT 1
 );
 
--- User-defined spending categories: 'bill' (fixed monthly) or 'daily'.
+-- User-defined spending categories: 'bill' (fixed monthly), 'daily' (everyday) or
+-- 'goal' (a planned purchase such as a car or a trip, with its own target).
 CREATE TABLE expense_categories (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   kind TEXT NOT NULL DEFAULT 'daily',
   default_amount_minor INTEGER NOT NULL DEFAULT 0,
+  target_minor INTEGER NOT NULL DEFAULT 0,
   due_day INTEGER,
   sort INTEGER NOT NULL DEFAULT 0,
   user_id TEXT,

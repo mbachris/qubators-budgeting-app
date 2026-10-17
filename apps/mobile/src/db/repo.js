@@ -123,29 +123,54 @@ export async function periodSummary(period) {
 }
 
 // ----------------------------------------------------------- expense categories
+const CATEGORY_KINDS = ["bill", "goal", "daily"];
+const asKind = (kind) => (CATEGORY_KINDS.includes(kind) ? kind : "daily");
+
 export async function listExpenseCategories() {
   const db = await getDB();
   const rows = await db.getAllAsync(
-    `SELECT id,name,kind,default_amount_minor AS defaultAmountMinor,due_day AS dueDay,sort
+    `SELECT id,name,kind,default_amount_minor AS defaultAmountMinor,target_minor AS targetMinor,
+            due_day AS dueDay,sort
      FROM expense_categories WHERE is_deleted=0 ORDER BY sort, name`
   );
-  return rows.map((r) => ({ ...r, kind: r.kind === "bill" ? "bill" : "daily" }));
+  return rows.map((r) => ({ ...r, kind: asKind(r.kind) }));
 }
 
-export async function addExpenseCategory({ name, kind = "daily", dueDay = null, defaultAmountMinor = 0 }) {
+export async function addExpenseCategory({ name, kind = "daily", dueDay = null, targetMinor = 0, defaultAmountMinor = 0 }) {
   const db = await getDB();
   const t = now();
   const id = `cat-${uuid().slice(0, 8)}`;
   const max = await db.getFirstAsync("SELECT COALESCE(MAX(sort),0) AS m FROM expense_categories");
   const sort = (max?.m ?? 0) + 1;
-  const row = { id, name, kind, defaultAmountMinor, dueDay, sort, updatedAt: t };
+  const row = { id, name, kind: asKind(kind), targetMinor, defaultAmountMinor, dueDay, sort, updatedAt: t };
   await run(db,
-    `INSERT INTO expense_categories (id,name,kind,default_amount_minor,due_day,sort,user_id,updated_at,is_deleted,rev)
-     VALUES (?,?,?,?,?,?,NULL,?,0,1)`,
-    id, name, kind, defaultAmountMinor, dueDay, sort, t
+    `INSERT INTO expense_categories (id,name,kind,default_amount_minor,target_minor,due_day,sort,user_id,updated_at,is_deleted,rev)
+     VALUES (?,?,?,?,?,?,?,NULL,?,0,1)`,
+    id, row.name, row.kind, defaultAmountMinor, targetMinor, dueDay, sort, t
   );
   await enqueue("expense_categories", id, "upsert", row);
   return row;
+}
+
+// Planned purchases (a car, a trip): the target is the plan, the total spent is the
+// progress. Spending accumulates across months, so this is not month-scoped.
+export async function goalRows(period = null) {
+  const db = await getDB();
+  return db.getAllAsync(
+    `SELECT c.id, c.name, c.target_minor AS targetMinor, c.sort,
+            COALESCE((SELECT SUM(e.amount_minor) FROM expenses e
+                      WHERE e.category_id=c.id AND e.is_deleted=0),0) AS spentMinor,
+            COALESCE((SELECT COUNT(*) FROM expenses e
+                      WHERE e.category_id=c.id AND e.is_deleted=0),0) AS payments,
+            COALESCE((SELECT SUM(e.amount_minor) FROM expenses e
+                      WHERE e.category_id=c.id AND e.is_deleted=0 AND e.period=?),0) AS spentThisMonthMinor,
+            COALESCE((SELECT e.amount_minor FROM expenses e
+                      WHERE e.category_id=c.id AND e.is_deleted=0
+                      ORDER BY e.occurred_at DESC LIMIT 1),0) AS lastMinor
+     FROM expense_categories c
+     WHERE c.is_deleted=0 AND c.kind='goal' ORDER BY c.sort, c.name`,
+    period
+  );
 }
 
 // Remembering the amount is what makes bills a one-tap job next month.

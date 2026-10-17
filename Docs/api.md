@@ -22,7 +22,8 @@ Base: `http://localhost:3000` on PC, `http://<PC-LAN-IP>:3000` from phone on sam
   community 5%; `living` (65%) is the spendable remainder.
 - `income_entries` — each row stores its own snapshot: `tithe_minor`, `savings_minor`, `emergency_minor`,
   `community_minor`, `spendable_minor`, plus `period` (`YYYY-MM`).
-- `expense_categories` — user-defined spending categories, `kind = 'bill' | 'daily'`.
+- `expense_categories` — user-defined spending categories, `kind = 'bill' | 'daily' | 'goal'`
+  (`goal` = a planned purchase with an optional `target_minor`, e.g. a car or a trip).
 - `expenses` — spending inside a month pot, tagged with `category_id` and `period`.
 - `payouts` — community giving only: `bucket='community'` with `category = ceremonies | society`.
   Tithe, savings and emergency are treated as given automatically, so they need no payout rows.

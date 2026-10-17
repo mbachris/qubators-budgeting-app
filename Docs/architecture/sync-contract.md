@@ -1,8 +1,9 @@
-# Sync contract v0.2 (phone SQLite ⇄ server Postgres, Better Auth optional)
+# Sync contract v0.3 (phone SQLite ⇄ server Postgres, Better Auth optional)
 
 Phone is truth offline. Server is truth online. Last-write-wins by `updatedAt`, deletes win via `isDeleted=1`.
 
 Synced tables (v2 model): `allocation_rules`, `income_entries`, `expense_categories`, `expenses`, `payouts`.
+`expense_categories.kind` is `bill | daily | goal`; `goal` rows carry `target_minor` (planned purchase).
 
 ## Push (phone → server)
 `POST /sync/push` `{ deviceId, rows: [{ table, id, data, updatedAt, isDeleted }] }`
