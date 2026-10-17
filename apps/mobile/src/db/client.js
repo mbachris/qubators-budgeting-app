@@ -1,6 +1,7 @@
 import * as SQLite from "expo-sqlite";
 import {
   DDL, SCHEMA_VERSION, SEED_ALLOCATION_RULES, SEED_EXPENSE_CATEGORIES, SEED_PROJECTS,
+  SEED_INCOME_SOURCES,
 } from "./schema";
 import { now } from "../lib/id";
 
@@ -40,6 +41,13 @@ async function createSchema(db) {
 
 async function seed(db) {
   const t = now();
+  for (const src of SEED_INCOME_SOURCES) {
+    await run(db,
+      `INSERT INTO income_sources (id,name,sort,user_id,updated_at,is_deleted,rev)
+       VALUES (?,?,?,NULL,?,0,1) ON CONFLICT(id) DO NOTHING`,
+      src.id, src.name, src.sort, t
+    );
+  }
   for (const r of SEED_ALLOCATION_RULES) {
     await run(db,
       `INSERT INTO allocation_rules (id,name,percent,kind,sort,user_id,updated_at,is_deleted,rev)
@@ -66,7 +74,10 @@ async function seed(db) {
 // Columns the additive migrations must guarantee, per table.
 const EXPECTED_COLUMNS = {
   payouts: { category: "TEXT" },
-  income_entries: { emergency_minor: "INTEGER NOT NULL DEFAULT 0" },
+  income_entries: {
+    emergency_minor: "INTEGER NOT NULL DEFAULT 0",
+    source_id: "TEXT",
+  },
   expense_categories: { target_minor: "INTEGER NOT NULL DEFAULT 0" },
 };
 
@@ -112,6 +123,20 @@ async function applyAdditiveMigrations(db) {
     }
   }
 
+  // Income sources are seeded, so an existing database needs them too.
+  const t = now();
+  for (const src of SEED_INCOME_SOURCES) {
+    const existing = await db.getFirstAsync("SELECT id FROM income_sources WHERE id=?", src.id);
+    if (!existing) {
+      await run(db,
+        `INSERT INTO income_sources (id,name,sort,user_id,updated_at,is_deleted,rev)
+         VALUES (?,?,?,NULL,?,0,1)`,
+        src.id, src.name, src.sort, t
+      );
+      added.push(`income_sources.${src.id}`);
+    }
+  }
+
   const hasEmergency = await db.getFirstAsync("SELECT id FROM allocation_rules WHERE id='emergency'");
   if (!hasEmergency) {
     await run(db,
@@ -131,9 +156,11 @@ async function applyAdditiveMigrations(db) {
 async function verifySchema(db) {
   const probes = [
     "SELECT emergency_minor FROM income_entries LIMIT 1",
+    "SELECT source_id FROM income_entries LIMIT 1",
     "SELECT category FROM payouts LIMIT 1",
     "SELECT target_minor FROM expense_categories LIMIT 1",
     "SELECT period FROM expenses LIMIT 1",
+    "SELECT name FROM income_sources LIMIT 1",
   ];
   for (const sql of probes) {
     try {

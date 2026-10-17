@@ -1,11 +1,13 @@
 -- Qubators server schema v2 (Postgres 16)
--- Model: allocations are DEDUCTIONS off each income; the 70% remainder is the
--- spendable pot of that month. Spending uses user-defined expense categories.
+-- Model: allocations are DEDUCTIONS off each income; the 65% remainder is the
+-- spendable pot of that month. Spending uses user-defined expense categories
+-- (bill | daily | goal) and income is tagged with its source for attribution.
 -- Dev reset: drops the v1 domain tables, so only test data is lost.
 
 DROP TABLE IF EXISTS expenses CASCADE;
 DROP TABLE IF EXISTS contributions CASCADE;
 DROP TABLE IF EXISTS income_entries CASCADE;
+DROP TABLE IF EXISTS income_sources CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS allocation_rules CASCADE;
 DROP TABLE IF EXISTS expense_categories CASCADE;
@@ -25,7 +27,18 @@ CREATE TABLE allocation_rules (
   rev INTEGER NOT NULL DEFAULT 1
 );
 
--- Each income carries its own deduction snapshot.
+-- Where income came from (attribution only): salary, business, gift, side hustle…
+CREATE TABLE income_sources (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  sort INTEGER NOT NULL DEFAULT 0,
+  user_id TEXT,
+  updated_at BIGINT NOT NULL,
+  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  rev INTEGER NOT NULL DEFAULT 1
+);
+
+-- Each income carries its own deduction snapshot, tagged with its source.
 CREATE TABLE income_entries (
   id TEXT PRIMARY KEY,
   amount_minor INTEGER NOT NULL,
@@ -33,6 +46,7 @@ CREATE TABLE income_entries (
   note TEXT,
   occurred_at BIGINT NOT NULL,
   period TEXT NOT NULL,
+  source_id TEXT,
   tithe_minor INTEGER NOT NULL DEFAULT 0,
   savings_minor INTEGER NOT NULL DEFAULT 0,
   emergency_minor INTEGER NOT NULL DEFAULT 0,
@@ -101,13 +115,15 @@ CREATE TABLE projects (
 
 CREATE INDEX idx_income_user_updated ON income_entries (user_id, updated_at);
 CREATE INDEX idx_income_period ON income_entries (period);
+CREATE INDEX idx_income_source ON income_entries (source_id);
+CREATE INDEX idx_income_sources_user_updated ON income_sources (user_id, updated_at);
 CREATE INDEX idx_expenses_user_updated ON expenses (user_id, updated_at);
 CREATE INDEX idx_expenses_period ON expenses (period);
 CREATE INDEX idx_payouts_user_updated ON payouts (user_id, updated_at);
 CREATE INDEX idx_expense_categories_user_updated ON expense_categories (user_id, updated_at);
 CREATE INDEX idx_allocation_rules_user_updated ON allocation_rules (user_id, updated_at);
 
--- Seed: default deduction rules 10 / 15 / 5 / 70.
+-- Seed: default deduction rules 10 / 15 / 5 / 5, leaving 65 spendable.
 INSERT INTO allocation_rules (id, name, percent, kind, sort, user_id, updated_at, is_deleted, rev)
 VALUES
   ('tithe',     'Tithes / Giving',   10, 'tithe',     0, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT, FALSE, 1),
@@ -117,8 +133,17 @@ VALUES
   ('living',    'Spendable (Living)', 65, 'living',   4, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT, FALSE, 1)
 ON CONFLICT (id) DO NOTHING;
 
--- Seed: demo community projects.
-INSERT INTO projects (id, name, goal_minor, raised_minor, cover_url, updated_at)
+-- Seed: income sources the community app ships with (users can add their own).
+INSERT INTO income_sources (id, name, sort, user_id, updated_at, is_deleted, rev)
+VALUES
+  ('salary',   'Salary',         0, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT, FALSE, 1),
+  ('business', 'Business',       1, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT, FALSE, 1),
+  ('side',     'Side hustle',    2, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT, FALSE, 1),
+  ('gift',     'Gift / Support', 3, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT, FALSE, 1),
+  ('other',    'Other',          9, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT, FALSE, 1)
+ON CONFLICT (id) DO NOTHING;
+
+-- Seed: demo community projects.INSERT INTO projects (id, name, goal_minor, raised_minor, cover_url, updated_at)
 VALUES
   ('water-point', 'Water point', 50000000, 32000000, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT),
   ('school-kits', 'School kits', 20000000,  4500000, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT)

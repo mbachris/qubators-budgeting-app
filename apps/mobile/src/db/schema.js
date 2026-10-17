@@ -2,7 +2,7 @@
 // v2 model: allocations are DEDUCTIONS off each income; spending is against
 // user-defined expense categories inside a monthly pot.
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const DDL = `
 CREATE TABLE IF NOT EXISTS allocation_rules (
@@ -10,9 +10,13 @@ CREATE TABLE IF NOT EXISTS allocation_rules (
   kind TEXT NOT NULL, sort INTEGER NOT NULL DEFAULT 0,
   user_id TEXT, updated_at INTEGER NOT NULL, is_deleted INTEGER NOT NULL DEFAULT 0, rev INTEGER NOT NULL DEFAULT 1
 );
+CREATE TABLE IF NOT EXISTS income_sources (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, sort INTEGER NOT NULL DEFAULT 0,
+  user_id TEXT, updated_at INTEGER NOT NULL, is_deleted INTEGER NOT NULL DEFAULT 0, rev INTEGER NOT NULL DEFAULT 1
+);
 CREATE TABLE IF NOT EXISTS income_entries (
   id TEXT PRIMARY KEY, amount_minor INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'BIF',
-  note TEXT, occurred_at INTEGER NOT NULL, period TEXT NOT NULL,
+  note TEXT, occurred_at INTEGER NOT NULL, period TEXT NOT NULL, source_id TEXT,
   tithe_minor INTEGER NOT NULL DEFAULT 0, savings_minor INTEGER NOT NULL DEFAULT 0,
   emergency_minor INTEGER NOT NULL DEFAULT 0, community_minor INTEGER NOT NULL DEFAULT 0,
   spendable_minor INTEGER NOT NULL DEFAULT 0,
@@ -44,9 +48,21 @@ CREATE TABLE IF NOT EXISTS sync_queue (
 );
 CREATE INDEX IF NOT EXISTS idx_queue_created ON sync_queue (created_at);
 CREATE INDEX IF NOT EXISTS idx_income_period ON income_entries (period);
+CREATE INDEX IF NOT EXISTS idx_income_source ON income_entries (source_id);
 CREATE INDEX IF NOT EXISTS idx_expense_period ON expenses (period);
 CREATE INDEX IF NOT EXISTS idx_payout_period ON payouts (period);
 `;
+
+// Where the money came from. The essentials are deducted off every income whatever
+// the source, so this list is for attribution: which source carried the month, and
+// how much was set aside out of each one.
+export const SEED_INCOME_SOURCES = [
+  { id: "salary", name: "Salary", sort: 0 },
+  { id: "business", name: "Business", sort: 1 },
+  { id: "side", name: "Side hustle", sort: 2 },
+  { id: "gift", name: "Gift / Support", sort: 3 },
+  { id: "other", name: "Other", sort: 9 },
+];
 
 // Deduction rules applied to every new income. `living` is the spendable remainder.
 // Tithe, savings and emergency are treated as given/set aside by default; only

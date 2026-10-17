@@ -26,3 +26,16 @@
   filing a car or a trip under "everyday spending" (hides a multi-month plan inside a daily list).
 - Dev note: model changes bumped phone `PRAGMA user_version` (v2 reset, later additive ALTERs run on
   every launch) and server `sql/002_model_v2.sql` drops the v1 domain tables.
+# ADR-007 Income sources: attribution, not separate pots
+- People earn from several places (salary, business, side hustle, gift). `income_sources` is a
+  seeded, user-extendable list; `income_entries.source_id` tags each record (null reads as `Other`).
+- Every source is split by the **same** rules — the essentials are set aside on every income
+  whoever paid — and each row keeps its own amounts, so per-source tithe/savings totals come free
+  from the snapshot columns.
+- **One pot per month, not one pot per source.** Sources answer "where did it come from"; spending
+  stays pooled. Per-source pots would force the user to tag every expense to a source.
+- Income tab reads as a ledger: this month by source, the set-aside per bucket, the entries
+  themselves, and all time by source.
+- Rejected: per-source percentage overrides (deferred — one rule set first, revisit if users ask);
+  reserving monthly bills at income time (deferred — it changes what the hero number means);
+  separate wallets per source (bookkeeping burden with no budgeting gain).

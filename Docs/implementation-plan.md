@@ -7,11 +7,19 @@ Source: `Docs/project_concept.md` — offline-first mobile APK, local storage, a
 - **M2 (Slices 3–4): done** — allocation engine 5/5 tests green; dual persistence (SQLite phone, Postgres + SQL migration server).
 - **M3 (Slice 5): done** — usable loop verified on device; both storage features visible.
 - **M4 (Slices 7–8): partially done** — `v0.1.0` APK built via EAS (preview/APK profile) and installed; cloud sync verified into Postgres.
-- Remaining: customisable deduction percentages, onboarding, custom icon/splash, dark theme toggle, R2 backup upload.
 - **Model v2 (feedback)**: allocations are deductions off income (tithe 10 / savings 15 / community 5), the
   70% remainder is the spendable pot; month pots (`period`); user-defined expense categories split into
   **bills** (fixed monthly, remembered amount) and **everyday**; payouts track tithe given / savings moved /
   community given; Home has a month navigator. Local + server data reset for the new schema.
+
+- **Model v3 (feedback)**: emergency fund 5% joins the deductions (tithe 10 / savings 15 / emergency 5 /
+  community 5 → 65% spendable); tithe, savings and emergency are recorded as "given" the moment income
+  arrives while community giving stays an action (ceremonies / society only); expenses take a name;
+  planned purchases (`kind='goal'`) hold a car or a trip with its own target and multi-month total;
+  income is tagged with its **source** (salary / business / side hustle / gift / other) and the Income tab
+  reads as a per-source ledger. Phone schema v6, additive launches (no reset).
+- Remaining: customisable deduction percentages, per-source percentages (deferred), bills reserve
+  (deferred), onboarding, custom icon/splash, dark theme toggle, R2 backup upload.
 
 Current state:
 - Local: `Docs/project_concept.md`, `Docs/implementation-plan.md` (this file)

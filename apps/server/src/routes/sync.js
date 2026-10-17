@@ -8,8 +8,9 @@ export const sync = new Hono();
 // Whitelist table → allowed columns (snake_case). Nothing is interpolated from raw user input.
 const COLUMNS = {
   allocation_rules: ["id", "name", "percent", "kind", "sort", "user_id", "updated_at", "is_deleted", "rev"],
+  income_sources: ["id", "name", "sort", "user_id", "updated_at", "is_deleted", "rev"],
   income_entries: [
-    "id", "amount_minor", "currency", "note", "occurred_at", "period",
+    "id", "amount_minor", "currency", "note", "occurred_at", "period", "source_id",
     "tithe_minor", "savings_minor", "emergency_minor", "community_minor", "spendable_minor",
     "user_id", "updated_at", "is_deleted", "rev",
   ],

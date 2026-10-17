@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — income sources (salary, business, side hustle, gift)
+
+- New `income_sources` list, seeded with **Salary · Business · Side hustle · Gift / Support · Other**
+  and extendable in-app (*＋ New source*). Every income record is tagged with where it came from.
+- **Every source is split by the same rules** — tithes 10%, savings 15%, emergency 5%, community 5% —
+  so the essentials are set aside on each income whoever paid. Each record keeps its own amounts.
+- **Income tab is now a ledger**: source chips + amount + note + live split preview, then
+  *Where <month> came from* (per-source totals, total in, each bucket set aside, spendable),
+  *Entries in <month>*, and *All time by source* with the tithes each source produced.
+- **Home** gains a *Where it came from* card above the deductions, so the hero number is explained.
+- Phone schema **v6** adds `income_sources` and `income_entries.source_id` (seeded and added on
+  launch, no reset); server `002` and the sync whitelist carry both.
+
 ## Unreleased — planned purchases (car, trip, big buys)
 
 - New category kind **`goal`** = *Planned purchase*: a car, a trip, a big repair. It is its own item

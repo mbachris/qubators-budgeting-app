@@ -6,7 +6,7 @@ import {
   listIncomeByPeriod, listExpenseCategories, listExpensesByPeriod, expenseTotalsByCategory,
   billRows, listAllocationRules, listProjects, listPayouts, periodSummary, lifetimeTotals,
   addIncome, addExpense, deleteExpense, addExpenseCategory, setCategoryDefault, addPayout,
-  goalRows, queueCount,
+  goalRows, listIncomeSources, addIncomeSource, incomeBySource, incomeBySourceLifetime, queueCount,
 } from "./src/db/repo";
 import { resetDB } from "./src/db/client";
 import { currentPeriod, stampInPeriod } from "./src/lib/period";
@@ -31,6 +31,9 @@ function AppShell() {
   const [period, setPeriod] = useState(currentPeriod());
   const [summary, setSummary] = useState(null);
   const [incomes, setIncomes] = useState([]);
+  const [sources, setSources] = useState([]);
+  const [sourceTotals, setSourceTotals] = useState([]);
+  const [sourceLifetime, setSourceLifetime] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [categoryTotals, setCategoryTotals] = useState([]);
   const [bills, setBills] = useState([]);
@@ -62,6 +65,7 @@ function AppShell() {
   const refresh = useCallback(async () => {
     const [
       summ, inc, cats, exp, totals, billsNow, ruleList, projs, paid, life, q, token, goalsNow,
+      srcs, srcTotals, srcLife,
     ] = await Promise.all([
       periodSummary(period),
       listIncomeByPeriod(period),
@@ -76,10 +80,14 @@ function AppShell() {
       queueCount(),
       getToken(),
       goalRows(period),
+      listIncomeSources(),
+      incomeBySource(period),
+      incomeBySourceLifetime(),
     ]);
     setSummary(summ); setIncomes(inc); setCategories(cats); setExpenses(exp);
     setCategoryTotals(totals); setBills(billsNow); setRules(ruleList); setProjects(projs);
     setPayouts(paid); setLifetime(life); setPending(q); setOnline(!!token); setGoals(goalsNow);
+    setSources(srcs); setSourceTotals(srcTotals); setSourceLifetime(srcLife);
   }, [period]);
 
   useEffect(() => {
@@ -96,13 +104,18 @@ function AppShell() {
 
   const props = {
     period, initialPeriod: period, setPeriod, summary, incomes, expenses, categoryTotals, bills,
-    goals, categories, rules,
+    goals, categories, rules, sources, sourceTotals, sourceLifetime,
     projects, payouts: payouts.filter((p) => p.bucket === "community"),
     lifetime, pending, online, setOnline, go: setTab, refresh,
 
-    // Income lands in the month you chose on the Income screen.
-    onSaveIncome: action("Saving income", async ({ amountMinor, period: p }) => {
-      await addIncome({ amountMinor, occurredAt: stampInPeriod(p) });
+    // Income lands in the month you chose on the Income screen, tagged with its source.
+    onSaveIncome: action("Saving income", async ({ amountMinor, period: p, sourceId, note }) => {
+      await addIncome({ amountMinor, sourceId, note, occurredAt: stampInPeriod(p) });
+      await refresh();
+    }),
+
+    onAddSource: action("Adding the source", async ({ name }) => {
+      await addIncomeSource({ name });
       await refresh();
     }),
 

@@ -14,7 +14,7 @@ const EXPENSE_KIND = { bill: "Bill", goal: "Planned", daily: "Everyday" };
 
 export default function Home({
   period, summary, bills, goals = [], rules = [], categoryTotals = [], expenses = [], lifetime,
-  payouts = [], pending = 0, online, setPeriod, go, onDeleteExpense,
+  payouts = [], sourceTotals = [], pending = 0, online, setPeriod, go, onDeleteExpense,
 }) {
   const cur = currentPeriod();
   const isCurrent = period === cur;
@@ -90,6 +90,28 @@ export default function Home({
           {formatMoney(spent)} spent of {formatMoney(spendable)} spendable ({usedPct}%)
         </Text>
       </View>
+
+      {sourceTotals.length > 0 && (
+        <>
+          <Text style={s.h}>Where it came from</Text>
+          <View style={s.card}>
+            {sourceTotals.map((r) => (
+              <View key={r.sourceId} style={s.rowBetween}>
+                <Text style={s.rowLabel}>
+                  {r.sourceName}
+                  <Text style={s.hint}>  ×{r.count}</Text>
+                </Text>
+                <Text style={s.money}>{formatMoney(r.totalMinor)}</Text>
+              </View>
+            ))}
+            <View style={s.hr} />
+            <Row label="Total in" value={formatMoney(summary?.incomeMinor ?? 0)} strong />
+            <Pressable style={s.miniBtn} onPress={() => go("add")}>
+              <Text style={s.miniBtnT}>Add income or a source</Text>
+            </Pressable>
+          </View>
+        </>
+      )}
 
       {/* Deductions with their percentages, taken the moment income lands. */}
       <Text style={s.h}>Deductions this month</Text>

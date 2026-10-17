@@ -20,10 +20,34 @@ export async function listAllocationRules() {
   );
 }
 
+// -------------------------------------------------------------- income sources
+// Attribution only: the essentials come off every income whatever the source, so
+// this list answers "which source carried the month" and "what came out of it".
+export async function listIncomeSources() {
+  const db = await getDB();
+  return db.getAllAsync(
+    "SELECT id,name,sort FROM income_sources WHERE is_deleted=0 ORDER BY sort, name"
+  );
+}
+
+export async function addIncomeSource({ name, sort = 50 }) {
+  const db = await getDB();
+  const t = now();
+  const id = `src-${uuid().slice(0, 8)}`;
+  const row = { id, name, sort, updatedAt: t };
+  await run(db,
+    `INSERT INTO income_sources (id,name,sort,user_id,updated_at,is_deleted,rev)
+     VALUES (?,?,?,NULL,?,0,1)`,
+    id, name, sort, t
+  );
+  await enqueue("income_sources", id, "upsert", row);
+  return row;
+}
+
 // ---------------------------------------------------------------------- income
 // Every income is split immediately: tithe / savings / community are set aside,
 // the remainder (living) is the spendable pot for that income's month.
-export async function addIncome({ amountMinor, currency = "BIF", note = null, occurredAt = null }) {
+export async function addIncome({ amountMinor, currency = "BIF", note = null, sourceId = null, occurredAt = null }) {
   const db = await getDB();
   const rules = await listAllocationRules();
   const split = allocateIncome(amountMinor, rules);
@@ -38,6 +62,7 @@ export async function addIncome({ amountMinor, currency = "BIF", note = null, oc
     amountMinor,
     currency,
     note,
+    sourceId,
     occurredAt: at,
     period,
     titheMinor: part("tithe"),
@@ -50,9 +75,9 @@ export async function addIncome({ amountMinor, currency = "BIF", note = null, oc
 
   await run(db,
     `INSERT INTO income_entries
-       (id,amount_minor,currency,note,occurred_at,period,tithe_minor,savings_minor,emergency_minor,community_minor,spendable_minor,user_id,updated_at,is_deleted,rev)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,0,1)`,
-    row.id, row.amountMinor, row.currency, row.note, row.occurredAt, row.period,
+       (id,amount_minor,currency,note,occurred_at,period,source_id,tithe_minor,savings_minor,emergency_minor,community_minor,spendable_minor,user_id,updated_at,is_deleted,rev)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NULL,?,0,1)`,
+    row.id, row.amountMinor, row.currency, row.note, row.occurredAt, row.period, row.sourceId,
     row.titheMinor, row.savingsMinor, row.emergencyMinor, row.communityMinor,
     row.spendableMinor, row.updatedAt
   );
@@ -63,12 +88,52 @@ export async function addIncome({ amountMinor, currency = "BIF", note = null, oc
 export async function listIncomeByPeriod(period) {
   const db = await getDB();
   return db.getAllAsync(
-    `SELECT id, amount_minor AS amountMinor, currency, note, occurred_at AS occurredAt, period,
-            tithe_minor AS titheMinor, savings_minor AS savingsMinor,
-            emergency_minor AS emergencyMinor, community_minor AS communityMinor,
-            spendable_minor AS spendableMinor
-     FROM income_entries WHERE is_deleted=0 AND period=? ORDER BY occurred_at DESC`,
+    `SELECT e.id, e.amount_minor AS amountMinor, e.currency, e.note,
+            e.occurred_at AS occurredAt, e.period, e.source_id AS sourceId,
+            COALESCE(s.name, 'Other') AS sourceName,
+            e.tithe_minor AS titheMinor, e.savings_minor AS savingsMinor,
+            e.emergency_minor AS emergencyMinor, e.community_minor AS communityMinor,
+            e.spendable_minor AS spendableMinor
+     FROM income_entries e LEFT JOIN income_sources s ON s.id = e.source_id
+     WHERE e.is_deleted=0 AND e.period=? ORDER BY e.occurred_at DESC`,
     period
+  );
+}
+
+// The month's income split by source — the ledger the user reads.
+export async function incomeBySource(period) {
+  const db = await getDB();
+  return db.getAllAsync(
+    `SELECT COALESCE(e.source_id,'other') AS sourceId, COALESCE(s.name,'Other') AS sourceName,
+            COUNT(*) AS count,
+            COALESCE(SUM(e.amount_minor),0) AS totalMinor,
+            COALESCE(SUM(e.tithe_minor),0) AS titheMinor,
+            COALESCE(SUM(e.savings_minor),0) AS savingsMinor,
+            COALESCE(SUM(e.emergency_minor),0) AS emergencyMinor,
+            COALESCE(SUM(e.community_minor),0) AS communityMinor,
+            COALESCE(SUM(e.spendable_minor),0) AS spendableMinor
+     FROM income_entries e LEFT JOIN income_sources s ON s.id = e.source_id
+     WHERE e.is_deleted=0 AND e.period=?
+     GROUP BY COALESCE(e.source_id,'other') ORDER BY totalMinor DESC`,
+    period
+  );
+}
+
+// All-time view: which source has carried the whole journey, and what it set aside.
+export async function incomeBySourceLifetime() {
+  const db = await getDB();
+  return db.getAllAsync(
+    `SELECT COALESCE(e.source_id,'other') AS sourceId, COALESCE(s.name,'Other') AS sourceName,
+            COUNT(*) AS count,
+            COALESCE(SUM(e.amount_minor),0) AS totalMinor,
+            COALESCE(SUM(e.tithe_minor),0) AS titheMinor,
+            COALESCE(SUM(e.savings_minor),0) AS savingsMinor,
+            COALESCE(SUM(e.emergency_minor),0) AS emergencyMinor,
+            COALESCE(SUM(e.community_minor),0) AS communityMinor,
+            COALESCE(SUM(e.spendable_minor),0) AS spendableMinor
+     FROM income_entries e LEFT JOIN income_sources s ON s.id = e.source_id
+     WHERE e.is_deleted=0
+     GROUP BY COALESCE(e.source_id,'other') ORDER BY totalMinor DESC`
   );
 }
 
@@ -366,7 +431,7 @@ export async function lifetimeTotals() {
 }
 
 // ---------------------------------------------------------------- sync plumbing
-const SYNC_TABLES = ["allocation_rules", "income_entries", "expense_categories", "expenses", "payouts"];
+const SYNC_TABLES = ["allocation_rules", "income_sources", "income_entries", "expense_categories", "expenses", "payouts"];
 
 export async function enqueue(tableName, rowId, op, payload) {
   const db = await getDB();
@@ -421,15 +486,16 @@ export async function applyServerRow(tableName, row) {
 
 export async function exportAll() {
   const db = await getDB();
-  const [allocationRules, income, expenseCategories, expenses, payouts, projects] = await Promise.all([
+  const [allocationRules, income, expenseCategories, expenses, payouts, projects, incomeSources] = await Promise.all([
     listAllocationRules(), db.getAllAsync("SELECT * FROM income_entries"),
     listExpenseCategories(), db.getAllAsync("SELECT * FROM expenses"),
-    listPayouts(1000), listProjects(),
+    listPayouts(1000), listProjects(), listIncomeSources(),
   ]);
   return {
     version: 2,
     exportedAt: now(),
     allocationRules,
+    incomeSources,
     income,
     expenseCategories,
     expenses,

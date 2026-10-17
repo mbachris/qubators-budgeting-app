@@ -20,8 +20,10 @@ Base: `http://localhost:3000` on PC, `http://<PC-LAN-IP>:3000` from phone on sam
 ## Money model (v2)
 - `allocation_rules` — deduction rules applied to every income: tithe 10%, savings 15%, emergency 5%,
   community 5%; `living` (65%) is the spendable remainder.
+- `income_sources` — where income came from: `salary | business | side | gift | other` seeded, and
+  users can add their own. Attribution only; every source is split by the same rules.
 - `income_entries` — each row stores its own snapshot: `tithe_minor`, `savings_minor`, `emergency_minor`,
-  `community_minor`, `spendable_minor`, plus `period` (`YYYY-MM`).
+  `community_minor`, `spendable_minor`, plus `period` (`YYYY-MM`) and `source_id`.
 - `expense_categories` — user-defined spending categories, `kind = 'bill' | 'daily' | 'goal'`
   (`goal` = a planned purchase with an optional `target_minor`, e.g. a car or a trip).
 - `expenses` — spending inside a month pot, tagged with `category_id` and `period`.
