@@ -292,9 +292,9 @@ export async function deleteExpense(id) {
   await enqueue("expenses", id, "delete", { id, isDeleted: true, updatedAt: t });
 }
 
-// ------------------------------------------------------------------ income
-// Soft delete: the row stays, flagged, so the sync queue and every month total
-// stay consistent and the server applies the same rule on the next sync.
+// ------------------------------------------------- removing records (soft delete)
+// The row stays, flagged, so the sync queue and every month total stay consistent
+// and the server applies the same rule on the next sync.
 export async function deleteIncome(id) {
   const db = await getDB();
   const t = now();
