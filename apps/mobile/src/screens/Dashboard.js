@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet } from "react-native";
 import { light, categoryColor } from "../theme/tokens";
 
-export default function Dashboard({ incomes, categories }) {
+export default function Dashboard({ incomes, categories, pending = 0, online }) {
   const total = incomes.reduce((a, i) => a + i.amountMinor, 0);
   const rules = categories.length ? categories : [];
   const rows = rules.map((r) => ({
@@ -9,9 +9,10 @@ export default function Dashboard({ incomes, categories }) {
     amountMinor: Math.floor((total * r.percent) / 100),
   }));
   const month = new Date().toLocaleString("en", { month: "long" });
+  const badge = !online ? "Local Vault • On this device" : pending > 0 ? `Cloud Sync • Pending ${pending}` : "Cloud Sync • Synced";
   return (
     <View>
-      <Text style={s.badge}>Local Vault • On this device</Text>
+      <Text style={s.badge}>{badge}</Text>
       <Text style={s.h}>{month}</Text>
       <Text style={s.money}>{(total / 100).toLocaleString()} BIF</Text>
       {rows.map((r) => (

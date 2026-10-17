@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { light } from "./src/theme/tokens";
 import { listIncome, listCategories, listProjects, addIncome, queueCount } from "./src/db/repo";
+import { getToken } from "./src/lib/api";
 import Dashboard from "./src/screens/Dashboard";
 import AddIncome from "./src/screens/AddIncome";
 import Community from "./src/screens/Community";
@@ -26,8 +27,10 @@ function AppShell() {
   const insets = useSafeAreaInsets();
 
   async function refresh() {
-    const [i, c, p, q] = await Promise.all([listIncome(), listCategories(), listProjects(), queueCount()]);
-    setIncomes(i); setCategories(c); setProjects(p); setPending(q);
+    const [i, c, p, q, t] = await Promise.all([
+      listIncome(), listCategories(), listProjects(), queueCount(), getToken(),
+    ]);
+    setIncomes(i); setCategories(c); setProjects(p); setPending(q); setOnline(!!t);
   }
 
   useEffect(() => {
@@ -46,7 +49,6 @@ function AppShell() {
     incomes, categories, projects, pending, online, setOnline, go: setTab,
     refresh,
     onSaveIncome: async (amountMinor) => { await addIncome({ amountMinor }); await refresh(); },
-    onGive: async () => { await refresh(); },
   };
 
   return (

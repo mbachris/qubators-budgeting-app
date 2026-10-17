@@ -76,3 +76,35 @@ export async function exportAll() {
   ]);
   return { version: 1, exportedAt: now(), categories, income, contributions };
 }
+
+// ---- Sync queue helpers (Phase 4 online side) ----
+const SYNC_TABLES = ["categories", "income_entries", "expenses", "contributions"];
+
+export async function listQueue(limit = 200) {
+  const db = await getDB();
+  return db.getAllAsync(
+    `SELECT id, table_name AS tableName, row_id AS rowId, op, payload, created_at AS createdAt, tries
+     FROM sync_queue ORDER BY created_at ASC LIMIT ?`,
+    limit
+  );
+}
+
+export async function deleteQueue(ids) {
+  if (!ids.length) return;
+  const db = await getDB();
+  const placeholders = ids.map(() => "?").join(",");
+  await db.runAsync(`DELETE FROM sync_queue WHERE id IN (${placeholders})`, ...ids);
+}
+
+// Server row → local row (identical snake_case columns). TABLE is whitelisted.
+export async function applyServerRow(table, tableName, row) {
+  if (!SYNC_TABLES.includes(tableName)) return;
+  const cols = Object.keys(row).filter((k) => k !== "id");
+  if (!cols.length) return;
+  const db = await getDB();
+  await db.runAsync(
+    `UPDATE ${tableName} SET ${cols.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`,
+    ...cols.map((c) => row[c]),
+    row.id
+  );
+}

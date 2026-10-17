@@ -1,6 +1,6 @@
-import { pgTable, text, timestamp, boolean, bigint, integer, doublePrecision, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, bigint, integer, doublePrecision } from "drizzle-orm/pg-core";
 
-// ---- Better Auth required tables (email OTP / magic link) ----
+// ---- Better Auth required tables (email OTP) ----
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -19,14 +19,14 @@ export const session = pgTable("session", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
 });
 
 export const account = pgTable("account", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
-  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
@@ -47,7 +47,7 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// ---- Domain mirror (server truth online; phone SQLite is truth offline) ----
+// ---- Domain mirror: server truth online, phone SQLite truth offline ----
 export const categories = pgTable("categories", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
