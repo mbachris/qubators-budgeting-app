@@ -9,6 +9,7 @@ const minorOf = (text) => Math.round((Number(String(text).replace(/[^0-9.]/g, ""
 export default function Spend({
   period, bills = [], goals = [], categories = [], expenses = [],
   onSaveExpense, onAddCategory, onPayBill, onAddToGoal, onDeleteExpense, onSetTarget,
+  onDeleteCategory,
 }) {
   const daily = categories.filter((c) => c.kind === "daily");
   const [amounts, setAmounts] = useState({});
@@ -23,6 +24,8 @@ export default function Spend({
   // Editing a plan's target, and confirming its removal, keyed by plan id.
   const [targetEdit, setTargetEdit] = useState(null);
   const [targetConfirm, setTargetConfirm] = useState(null);
+  // Confirming the removal of a whole plan (the category itself).
+  const [planConfirm, setPlanConfirm] = useState(null);
 
   // Bills and planned purchases are pre-filled, so logging is one tap.
   useEffect(() => {
@@ -187,6 +190,7 @@ export default function Spend({
                         hitSlop={8}
                         onPress={() => {
                           setTargetConfirm(null);
+                          setPlanConfirm(null);
                           setTargetEdit({ id: g.id, val: target > 0 ? String(target / 100) : "" });
                         }}
                       >
@@ -227,6 +231,51 @@ export default function Spend({
               >
                 <Text style={s.bt}>Add</Text>
               </Pressable>
+            </View>
+
+            <View style={s.planFoot}>
+              {planConfirm === g.id ? (
+                <>
+                  <Text style={s.tWarn}>
+                    Remove the plan “{g.name}”?
+                    {g.spentMinor > 0
+                      ? ` The ${formatMoney(g.spentMinor)} already logged stays in your records and keeps its name.`
+                      : " Nothing has been logged to it yet."}
+                  </Text>
+                  <Pressable hitSlop={8} onPress={() => setPlanConfirm(null)}>
+                    <Text style={s.tCancel}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={async () => {
+                      const ok = await onDeleteCategory(g.id);
+                      if (ok === null) return;
+                      setPlanConfirm(null);
+                      setMsg(`${g.name}: plan removed.`);
+                    }}
+                  >
+                    <Text style={s.tRemove}>Remove</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  <Text style={s.due}>
+                    {g.payments === 0
+                      ? "Nothing logged yet"
+                      : `${g.payments} payment${g.payments === 1 ? "" : "s"} logged`}
+                  </Text>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() => {
+                      setTargetEdit(null);
+                      setTargetConfirm(null);
+                      setPlanConfirm(g.id);
+                    }}
+                  >
+                    <Text style={s.tRemove}>Remove this plan</Text>
+                  </Pressable>
+                </>
+              )}
             </View>
           </View>
         );
@@ -390,6 +439,7 @@ const s = StyleSheet.create({
   del: { marginLeft: 10, paddingHorizontal: 4 },
   delT: { color: light.text3, fontSize: 16 },
   targetRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 },
+  planFoot: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderColor: light.border },
   tFix: { color: light.info, fontWeight: "700", fontSize: 12 },
   tDel: { color: light.danger, fontWeight: "700", fontSize: 14, marginLeft: 14 },
   tCancel: { color: light.text2, fontWeight: "700", fontSize: 12, marginRight: 14 },

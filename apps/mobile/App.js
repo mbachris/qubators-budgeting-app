@@ -6,7 +6,7 @@ import {
   listIncomeByPeriod, listExpenseCategories, listExpensesByPeriod, expenseTotalsByCategory,
   billRows, listAllocationRules, listProjects, listPayouts, periodSummary, lifetimeTotals,
   addIncome, addExpense, deleteExpense, addExpenseCategory, setCategoryDefault, addPayout,
-  deleteIncome, deletePayout, setCategoryTarget,
+  deleteIncome, deletePayout, setCategoryTarget, deleteExpenseCategory,
   goalRows, listIncomeSources, addIncomeSource, incomeBySource, incomeBySourceLifetime, queueCount,
 } from "./src/db/repo";
 import { resetDB } from "./src/db/client";
@@ -160,6 +160,13 @@ function AppShell() {
     // Setting it to 0 clears the target without touching what is already in the plan.
     onSetTarget: action("Saving the target", async (id, targetMinor) => {
       await setCategoryTarget(id, targetMinor);
+      await refresh();
+    }),
+
+    // Removing a plan (or any category) keeps the expenses already logged to it:
+    // that money really was spent, so the record keeps its name and its amount.
+    onDeleteCategory: action("Removing the plan", async (id) => {
+      await deleteExpenseCategory(id);
       await refresh();
     }),
 

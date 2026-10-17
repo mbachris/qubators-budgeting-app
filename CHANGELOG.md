@@ -18,6 +18,10 @@
   *Change target*, and a `✕` that removes it after a confirming tap that names the consequence
   (*"the 2,000,000 already in this plan stays"*). A plan created without a target — or with the wrong
   one — can now be corrected; the target is the plan, the running total is untouched.
+- **A whole plan can be removed** (*Remove this plan* at the foot of each card, confirming tap first) —
+  for a duplicate plan or one created by mistake. Removing it keeps every payment already logged to it:
+  that money really was spent, so it stays in the month's records and in *Spending by category* with its
+  name intact. Only the plan leaves the list.
 
 ## Unreleased — income sources (salary, business, side hustle, gift)
 
