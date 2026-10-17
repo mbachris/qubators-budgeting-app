@@ -1,6 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import {
-  DDL, SCHEMA_VERSION, SEED_ALLOCATION_RULES, SEED_EXPENSE_CATEGORIES, SEED_PROJECTS,
+  DDL, DDL_INDEXES, SCHEMA_VERSION, SEED_ALLOCATION_RULES, SEED_EXPENSE_CATEGORIES, SEED_PROJECTS,
   SEED_INCOME_SOURCES,
 } from "./schema";
 import { now } from "../lib/id";
@@ -28,15 +28,24 @@ async function dropEverything(db) {
   console.log("[db] reset — local tables dropped for schema v" + SCHEMA_VERSION);
 }
 
-async function createSchema(db) {
-  for (const stmt of statements(DDL)) {
+async function execScript(db, sql, what) {
+  for (const stmt of statements(sql)) {
     try {
       await db.execAsync(stmt);
     } catch (e) {
-      console.warn("[db] DDL failed:", String(e?.message || e), stmt.slice(0, 60));
+      console.warn(`[db] ${what} failed:`, String(e?.message || e), stmt.slice(0, 60));
       throw e;
     }
   }
+}
+
+const createTables = (db) => execScript(db, DDL, "DDL");
+const createIndexes = (db) => execScript(db, DDL_INDEXES, "index DDL");
+
+// Tables then indexes — safe when nothing has to be altered first.
+async function createSchema(db) {
+  await createTables(db);
+  await createIndexes(db);
 }
 
 async function seed(db) {
@@ -192,8 +201,9 @@ async function migrate(db) {
       return;
     }
 
-    await createSchema(db);            // idempotent; creates any missing table
+    await createTables(db);            // idempotent; creates any missing table
     await applyAdditiveMigrations(db); // idempotent; adds any missing column
+    await createIndexes(db);           // only now, so a new column can be indexed
 
     if (!(await verifySchema(db))) {
       console.warn("[db] schema incomplete → rebuilding local tables");
@@ -206,8 +216,14 @@ async function migrate(db) {
       console.log(`[db] migrated v${version} → v${SCHEMA_VERSION}`);
     }
   } catch (e) {
-    // Never leave the app with an unusable database.
-    console.warn("[db] migration failed:", String(e?.message || e), "→ resetting local tables");
+    // A failed migration is not automatically a reason to wipe the user's data:
+    // only rebuild when the schema genuinely cannot answer the app's own queries.
+    console.warn("[db] migration failed:", String(e?.message || e));
+    if (await verifySchema(db)) {
+      console.warn("[db] schema still usable — keeping local data");
+      return;
+    }
+    console.warn("[db] schema unusable → rebuilding local tables");
     await resetTables(db);
   }
 }

@@ -143,7 +143,8 @@ VALUES
   ('other',    'Other',          9, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT, FALSE, 1)
 ON CONFLICT (id) DO NOTHING;
 
--- Seed: demo community projects.INSERT INTO projects (id, name, goal_minor, raised_minor, cover_url, updated_at)
+-- Seed: demo community projects.
+INSERT INTO projects (id, name, goal_minor, raised_minor, cover_url, updated_at)
 VALUES
   ('water-point', 'Water point', 50000000, 32000000, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT),
   ('school-kits', 'School kits', 20000000,  4500000, NULL, (EXTRACT(EPOCH FROM NOW())*1000)::BIGINT)

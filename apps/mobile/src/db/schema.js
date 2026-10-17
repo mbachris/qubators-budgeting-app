@@ -46,6 +46,11 @@ CREATE TABLE IF NOT EXISTS sync_queue (
   id TEXT PRIMARY KEY, table_name TEXT NOT NULL, row_id TEXT NOT NULL, op TEXT NOT NULL,
   payload TEXT, created_at INTEGER NOT NULL, tries INTEGER NOT NULL DEFAULT 0
 );
+`;
+
+// Indexes live apart from the tables: an index on a column that an additive
+// migration adds must be created AFTER that column exists, never before.
+export const DDL_INDEXES = `
 CREATE INDEX IF NOT EXISTS idx_queue_created ON sync_queue (created_at);
 CREATE INDEX IF NOT EXISTS idx_income_period ON income_entries (period);
 CREATE INDEX IF NOT EXISTS idx_income_source ON income_entries (source_id);
