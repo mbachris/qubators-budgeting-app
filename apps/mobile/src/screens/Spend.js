@@ -8,7 +8,7 @@ const minorOf = (text) => Math.round((Number(String(text).replace(/[^0-9.]/g, ""
 
 export default function Spend({
   period, bills = [], goals = [], categories = [], expenses = [],
-  onSaveExpense, onAddCategory, onPayBill, onAddToGoal, onDeleteExpense,
+  onSaveExpense, onAddCategory, onPayBill, onAddToGoal, onDeleteExpense, onSetTarget,
 }) {
   const daily = categories.filter((c) => c.kind === "daily");
   const [amounts, setAmounts] = useState({});
@@ -20,6 +20,9 @@ export default function Spend({
   const [newName, setNewName] = useState("");
   const [newKind, setNewKind] = useState("daily");
   const [newTarget, setNewTarget] = useState("");
+  // Editing a plan's target, and confirming its removal, keyed by plan id.
+  const [targetEdit, setTargetEdit] = useState(null);
+  const [targetConfirm, setTargetConfirm] = useState(null);
 
   // Bills and planned purchases are pre-filled, so logging is one tap.
   useEffect(() => {
@@ -115,6 +118,89 @@ export default function Spend({
             )}
             {target === 0 && g.spentThisMonthMinor > 0 && (
               <Text style={s.due}>{formatMoney(g.spentThisMonthMinor)} this month • no target set</Text>
+            )}
+
+            {targetEdit?.id === g.id ? (
+              <>
+                <Text style={s.label}>Target amount (BIF)</Text>
+                <View style={s.payRow}>
+                  <TextInput
+                    style={[s.in, s.inPay]}
+                    keyboardType="numeric"
+                    value={targetEdit.val}
+                    onChangeText={(v) => setTargetEdit({ id: g.id, val: v })}
+                    placeholder="e.g. 15000000"
+                  />
+                  <Pressable
+                    style={[s.btn, s.btnPay, busy && s.off]}
+                    disabled={busy}
+                    onPress={async () => {
+                      setBusy(true);
+                      try {
+                        const v = minorOf(targetEdit.val);
+                        const ok = await onSetTarget(g.id, v);
+                        if (ok === null) return; // the error banner explains why
+                        setTargetEdit(null);
+                        setMsg(v > 0 ? `${g.name}: target set to ${formatMoney(v)}.` : `${g.name}: target removed.`);
+                      } finally { setBusy(false); }
+                    }}
+                  >
+                    <Text style={s.bt}>Save</Text>
+                  </Pressable>
+                </View>
+                <View style={s.targetRow}>
+                  <Text style={s.due}>Leave it empty to remove the target.</Text>
+                  <Pressable hitSlop={8} onPress={() => setTargetEdit(null)}>
+                    <Text style={s.tFix}>Cancel</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <View style={s.targetRow}>
+                {targetConfirm === g.id ? (
+                  <>
+                    <Text style={s.tWarn}>
+                      Remove the target? The {formatMoney(g.spentMinor)} already in this plan stays.
+                    </Text>
+                    <Pressable hitSlop={8} onPress={() => setTargetConfirm(null)}>
+                      <Text style={s.tCancel}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      hitSlop={8}
+                      onPress={async () => {
+                        const ok = await onSetTarget(g.id, 0);
+                        if (ok === null) return;
+                        setTargetConfirm(null);
+                        setMsg(`${g.name}: target removed.`);
+                      }}
+                    >
+                      <Text style={s.tRemove}>Remove</Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <>
+                    <Text style={s.due}>
+                      {target > 0 ? `Target ${formatMoney(target)}` : "No target set"}
+                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Pressable
+                        hitSlop={8}
+                        onPress={() => {
+                          setTargetConfirm(null);
+                          setTargetEdit({ id: g.id, val: target > 0 ? String(target / 100) : "" });
+                        }}
+                      >
+                        <Text style={s.tFix}>{target > 0 ? "Change target" : "Set target"}</Text>
+                      </Pressable>
+                      {target > 0 && (
+                        <Pressable hitSlop={8} onPress={() => setTargetConfirm(g.id)}>
+                          <Text style={s.tDel}>✕</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  </>
+                )}
+              </View>
             )}
 
             <View style={s.payRow}>
@@ -303,4 +389,10 @@ const s = StyleSheet.create({
   money: { fontVariant: ["tabular-nums"], fontWeight: "600" },
   del: { marginLeft: 10, paddingHorizontal: 4 },
   delT: { color: light.text3, fontSize: 16 },
+  targetRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 },
+  tFix: { color: light.info, fontWeight: "700", fontSize: 12 },
+  tDel: { color: light.danger, fontWeight: "700", fontSize: 14, marginLeft: 14 },
+  tCancel: { color: light.text2, fontWeight: "700", fontSize: 12, marginRight: 14 },
+  tRemove: { color: light.danger, fontWeight: "700", fontSize: 12 },
+  tWarn: { flex: 1, color: light.danger, fontSize: 12, lineHeight: 16 },
 });

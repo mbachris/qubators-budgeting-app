@@ -256,6 +256,19 @@ export async function deleteExpenseCategory(id) {
   await enqueue("expense_categories", id, "delete", { id, isDeleted: true, updatedAt: t });
 }
 
+// The plan's target is editable after the fact: a target typed by mistake must be
+// removable, and a target forgotten at creation must be addable later. Setting it to
+// 0 clears it — the money already added to the plan is untouched.
+export async function setCategoryTarget(id, targetMinor) {
+  const db = await getDB();
+  const t = now();
+  await run(db,
+    "UPDATE expense_categories SET target_minor=?, updated_at=? WHERE id=?",
+    targetMinor, t, id
+  );
+  await enqueue("expense_categories", id, "upsert", { id, targetMinor, updatedAt: t });
+}
+
 // -------------------------------------------------------------------- expenses
 export async function addExpense({ categoryId, amountMinor, note = null, occurredAt = null, period = null }) {
   const db = await getDB();

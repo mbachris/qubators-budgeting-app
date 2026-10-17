@@ -14,6 +14,10 @@
 - Deletes are soft (`is_deleted = 1`) and queued like expenses, so offline maths and the next sync agree.
   No migration: every table already carried `is_deleted` + `rev`.
 - Fixing an entry scrolls the form back into view.
+- **A planned purchase's target is no longer write-once.** Each plan card shows its target with
+  *Change target*, and a `✕` that removes it after a confirming tap that names the consequence
+  (*"the 2,000,000 already in this plan stays"*). A plan created without a target — or with the wrong
+  one — can now be corrected; the target is the plan, the running total is untouched.
 
 ## Unreleased — income sources (salary, business, side hustle, gift)
 

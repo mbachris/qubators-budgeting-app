@@ -6,7 +6,7 @@ import {
   listIncomeByPeriod, listExpenseCategories, listExpensesByPeriod, expenseTotalsByCategory,
   billRows, listAllocationRules, listProjects, listPayouts, periodSummary, lifetimeTotals,
   addIncome, addExpense, deleteExpense, addExpenseCategory, setCategoryDefault, addPayout,
-  deleteIncome, deletePayout,
+  deleteIncome, deletePayout, setCategoryTarget,
   goalRows, listIncomeSources, addIncomeSource, incomeBySource, incomeBySourceLifetime, queueCount,
 } from "./src/db/repo";
 import { resetDB } from "./src/db/client";
@@ -154,6 +154,12 @@ function AppShell() {
 
     onAddCategory: action("Adding the category", async ({ name, kind, targetMinor }) => {
       await addExpenseCategory({ name, kind, targetMinor });
+      await refresh();
+    }),
+
+    // Setting it to 0 clears the target without touching what is already in the plan.
+    onSetTarget: action("Saving the target", async (id, targetMinor) => {
+      await setCategoryTarget(id, targetMinor);
       await refresh();
     }),
 
