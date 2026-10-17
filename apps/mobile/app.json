@@ -1,7 +1,7 @@
 {
   "name": "Qubators",
   "slug": "qubators-budgeting-app",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "orientation": "portrait",
   "scheme": "qubators",
   "platforms": [
@@ -14,5 +14,11 @@
   "plugins": [
     "expo-sqlite",
     "expo-secure-store"
-  ]
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "8f04bb9e-f10e-4d35-a756-949eba600f34"
+    }
+  },
+  "owner": "mbachris"
 }
