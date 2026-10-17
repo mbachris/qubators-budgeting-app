@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { light } from "./src/theme/tokens";
@@ -6,6 +6,7 @@ import {
   listIncomeByPeriod, listExpenseCategories, listExpensesByPeriod, expenseTotalsByCategory,
   billRows, listAllocationRules, listProjects, listPayouts, periodSummary, lifetimeTotals,
   addIncome, addExpense, deleteExpense, addExpenseCategory, setCategoryDefault, addPayout,
+  deleteIncome, deletePayout,
   goalRows, listIncomeSources, addIncomeSource, incomeBySource, incomeBySourceLifetime, queueCount,
 } from "./src/db/repo";
 import { resetDB } from "./src/db/client";
@@ -47,6 +48,7 @@ function AppShell() {
   const [online, setOnline] = useState(false);
   const [ready, setReady] = useState(false);
   const [err, setErr] = useState("");
+  const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
 
   // Every write goes through here so a failed statement shows up as a message
@@ -107,6 +109,8 @@ function AppShell() {
     goals, categories, rules, sources, sourceTotals, sourceLifetime,
     projects, payouts: payouts.filter((p) => p.bucket === "community"),
     lifetime, pending, online, setOnline, go: setTab, refresh,
+    // Fetching an old entry back into the form only helps if the form is in view.
+    scrollToTop: () => scrollRef.current?.scrollTo({ y: 0, animated: true }),
 
     // Income lands in the month you chose on the Income screen, tagged with its source.
     onSaveIncome: action("Saving income", async ({ amountMinor, period: p, sourceId, note }) => {
@@ -136,6 +140,18 @@ function AppShell() {
       await refresh();
     }),
 
+    // Removing an entry also un-sets the essentials that came off it, which is
+    // why the screens ask for a confirming tap first.
+    onDeleteIncome: action("Removing the income", async (id) => {
+      await deleteIncome(id);
+      await refresh();
+    }),
+
+    onDeleteGift: action("Removing the gift", async (id) => {
+      await deletePayout(id);
+      await refresh();
+    }),
+
     onAddCategory: action("Adding the category", async ({ name, kind, targetMinor }) => {
       await addExpenseCategory({ name, kind, targetMinor });
       await refresh();
@@ -160,7 +176,7 @@ function AppShell() {
 
   return (
     <View style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <ScrollView style={s.body} contentContainerStyle={s.bodyContent} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} style={s.body} contentContainerStyle={s.bodyContent} keyboardShouldPersistTaps="handled">
         {ready ? <Screen {...props} /> : <Text style={s.loading}>Loading…</Text>}
       </ScrollView>
       {!!err && (

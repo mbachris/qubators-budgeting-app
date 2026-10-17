@@ -39,3 +39,19 @@
 - Rejected: per-source percentage overrides (deferred — one rule set first, revisit if users ask);
   reserving monthly bills at income time (deferred — it changes what the hero number means);
   separate wallets per source (bookkeeping burden with no budgeting gain).
+# ADR-008 Correcting the record: soft deletes and replace-on-fix
+- Anything the user typed by mistake must be removable, and removing must not silently rewrite the
+  story. Every table already carries `is_deleted` and `rev`, so removal is a **soft delete**:
+  `UPDATE … SET is_deleted=1` locally plus an outbox entry, identical to `deleteExpense`.
+- Removing income is not hiding a line — it un-sets the essentials that came off that income, and it
+  moves the month's *available for expenditure*. So removal asks for a **confirming tap that names the
+  numbers** (income and gifts), unlike Spend's instant `✕`.
+- **Fix = replace, not edit in place.** Each `income_entries` row stores its own split snapshot
+  (`tithe_minor … spendable_minor`). Editing those numbers in place would make the history lie, so
+  *Fix* loads the row back into the form and saving **writes the corrected entry first, then removes the
+  old one** — a failure leaves the original intact, never a double count.
+- Removing a gift returns its amount to the community bucket's *remaining to give* and reverses any
+  project credit it had created.
+- Rejected: in-place editing of income amounts (silently rewrites set-aside history); hard `DELETE`
+  (breaks the outbox/LWW contract and cannot be reconciled by a later pull); undo-toast instead of
+  confirm (too easy to miss when four figures move at once).

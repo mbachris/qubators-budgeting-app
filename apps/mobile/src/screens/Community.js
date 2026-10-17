@@ -4,10 +4,11 @@ import { light, formatMoney } from "../theme/tokens";
 import { periodLabel } from "../lib/period";
 import { COMMUNITY_CATEGORIES } from "../db/schema";
 
-export default function Community({ period, summary, lifetime, payouts = [], onGive, go }) {
+export default function Community({ period, summary, lifetime, payouts = [], onGive, onDeleteGift, go }) {
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [confirmId, setConfirmId] = useState(null);
 
   const minor = Math.round((Number(amount.replace(/[^0-9.]/g, "")) || 0) * 100);
   const givenThisMonth = (id) =>
@@ -64,12 +65,49 @@ export default function Community({ period, summary, lifetime, payouts = [], onG
 
       <Text style={s.section}>Recent gifts</Text>
       {payouts.length === 0 && <Text style={s.sub}>No gifts recorded yet.</Text>}
+      {payouts.length > 0 && <Text style={s.sub}>✕ removes a gift given by mistake.</Text>}
       {payouts.slice(0, 20).map((p) => (
-        <View key={p.id} style={s.line}>
-          <Text style={s.lineT}>
-            {COMMUNITY_CATEGORIES.find((c) => c.id === (p.category ?? "society"))?.name ?? "Community"}
-          </Text>
-          <Text style={s.moneySmall}>{formatMoney(p.amountMinor)}</Text>
+        <View key={p.id} style={s.gift}>
+          <View style={s.giftRow}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={s.lineT}>
+                {COMMUNITY_CATEGORIES.find((c) => c.id === (p.category ?? "society"))?.name ?? "Community"}
+              </Text>
+              <Text style={s.sub}>
+                {periodLabel(p.period)}
+                {p.note ? ` • ${p.note}` : ""}
+              </Text>
+            </View>
+            {confirmId === p.id ? (
+              <View style={s.acts}>
+                <Pressable hitSlop={8} onPress={() => setConfirmId(null)}>
+                  <Text style={s.cancelT}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  hitSlop={8}
+                  onPress={async () => {
+                    await onDeleteGift(p.id);
+                    setConfirmId(null);
+                  }}
+                >
+                  <Text style={s.removeT}>Remove</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={s.acts}>
+                <Text style={s.moneySmall}>{formatMoney(p.amountMinor)}</Text>
+                <Pressable hitSlop={8} onPress={() => setConfirmId(p.id)} style={s.xWrap}>
+                  <Text style={s.delT}>✕</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+          {confirmId === p.id && (
+            <Text style={s.warnT}>
+              Removes {formatMoney(p.amountMinor)} from {periodLabel(p.period)}. The money goes back to
+              “remaining to give”, so you can record it again correctly.
+            </Text>
+          )}
         </View>
       ))}
 
@@ -98,4 +136,12 @@ const s = StyleSheet.create({
   btGhost: { color: light.text, fontWeight: "700" },
   line: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderColor: light.border },
   lineT: { color: light.text2 },
+  gift: { borderBottomWidth: 1, borderColor: light.border, paddingVertical: 8 },
+  giftRow: { flexDirection: "row", alignItems: "center" },
+  acts: { flexDirection: "row", alignItems: "center" },
+  xWrap: { marginLeft: 12 },
+  delT: { color: light.danger, fontWeight: "700", fontSize: 15 },
+  cancelT: { color: light.text2, fontWeight: "700", fontSize: 13, marginRight: 14 },
+  removeT: { color: light.danger, fontWeight: "700", fontSize: 13 },
+  warnT: { color: light.danger, fontSize: 12, marginTop: 6, lineHeight: 17 },
 });

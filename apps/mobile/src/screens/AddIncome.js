@@ -6,7 +6,7 @@ import { currentPeriod, periodLabel, shiftPeriod } from "../lib/period";
 
 export default function AddIncome({
   rules = [], initialPeriod, period, incomes = [], sources = [], sourceTotals = [],
-  sourceLifetime = [], onSaveIncome, onAddSource, go,
+  sourceLifetime = [], onSaveIncome, onAddSource, onDeleteIncome, scrollToTop, go,
 }) {
   const [val, setVal] = useState("");
   const [note, setNote] = useState("");
@@ -14,6 +14,9 @@ export default function AddIncome({
   const [newSource, setNewSource] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmId, setConfirmId] = useState(null);
+  // Set while correcting a mistyped entry: saving replaces it instead of adding.
+  const [editingId, setEditingId] = useState(null);
   // Income is recorded into the month you are looking at, not blindly into today.
   const [incomePeriod, setIncomePeriod] = useState(initialPeriod ?? currentPeriod());
 
@@ -28,6 +31,35 @@ export default function AddIncome({
   const chosen = sources.find((s) => s.id === sourceId) ?? null;
   const sum = (rows, key) => rows.reduce((a, r) => a + (r[key] ?? 0), 0);
   const monthTotal = sum(sourceTotals, "totalMinor");
+
+  // Load a past entry back into the form so a typo is two taps to fix.
+  const refill = (e) => {
+    setVal(String((e.amountMinor ?? 0) / 100));
+    setNote(e.note ?? "");
+    setSourceId(e.sourceId ?? null);
+    setIncomePeriod(e.period);
+    setEditingId(e.id);
+    setConfirmId(null);
+    scrollToTop?.();
+  };
+
+  const save = async () => {
+    if (minor <= 0 || busy) return;
+    setBusy(true);
+    try {
+      // Add the corrected entry first: if this fails, the original is still there.
+      await onSaveIncome({
+        amountMinor: minor,
+        period: incomePeriod,
+        sourceId,
+        note: note.trim() || null,
+      });
+      if (editingId) await onDeleteIncome(editingId);
+      setVal("");
+      setNote("");
+      setEditingId(null);
+    } finally { setBusy(false); }
+  };
 
   return (
     <View>
@@ -141,25 +173,30 @@ export default function AddIncome({
         </View>
       )}
 
+      {editingId && (
+        <View style={s.fixBar}>
+          <Text style={s.fixBarT}>
+            Fixing an entry in {periodLabel(incomePeriod)} — saving replaces it, so the old one is removed
+            and nothing is counted twice.
+          </Text>
+          <Pressable onPress={() => setEditingId(null)} hitSlop={8}>
+            <Text style={s.fixBarX}>Cancel fix</Text>
+          </Pressable>
+        </View>
+      )}
+
       <Pressable
         disabled={busy || minor <= 0}
         style={[s.btn, (busy || minor <= 0) && s.off]}
-        onPress={async () => {
-          if (minor <= 0) return;
-          setBusy(true);
-          try {
-            await onSaveIncome({
-              amountMinor: minor,
-              period: incomePeriod,
-              sourceId,
-              note: note.trim() || null,
-            });
-            setVal("");
-            setNote("");
-          } finally { setBusy(false); }
-        }}
+        onPress={save}
       >
-        <Text style={s.bt}>{busy ? "Saving…" : `Save income to ${periodLabel(incomePeriod)}`}</Text>
+        <Text style={s.bt}>
+          {busy
+            ? "Saving…"
+            : editingId
+              ? `Save correction to ${periodLabel(incomePeriod)}`
+              : `Save income to ${periodLabel(incomePeriod)}`}
+        </Text>
       </Pressable>
 
       {/* -------------------------------------------------- the record */}
@@ -209,16 +246,55 @@ export default function AddIncome({
       {incomes.length > 0 && (
         <>
           <Text style={s.section}>Entries in {periodLabel(period)}</Text>
+          <Text style={s.due}>Tap an entry to fix it. ✕ removes it.</Text>
           {incomes.map((e) => (
-            <View key={e.id} style={s.line}>
-              <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={s.lineT}>{e.sourceName}</Text>
-                <Text style={s.due}>
-                  {new Date(e.occurredAt).toLocaleDateString()}
-                  {e.note ? ` • ${e.note}` : ""}
-                </Text>
+            <View key={e.id} style={[s.entry, editingId === e.id && s.entryOn]}>
+              <View style={s.entryRow}>
+                <Pressable style={s.entryTap} onPress={() => refill(e)}>
+                  <Text style={s.lineT}>
+                    {e.sourceName}
+                    {editingId === e.id ? "  (fixing)" : ""}
+                  </Text>
+                  <Text style={s.due}>
+                    {new Date(e.occurredAt).toLocaleDateString()}
+                    {e.note ? ` • ${e.note}` : ""}
+                  </Text>
+                </Pressable>
+                {confirmId === e.id ? (
+                  <View style={s.entryActs}>
+                    <Pressable hitSlop={8} onPress={() => setConfirmId(null)}>
+                      <Text style={s.cancelT}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      hitSlop={8}
+                      onPress={async () => {
+                        await onDeleteIncome(e.id);
+                        setConfirmId(null);
+                      }}
+                    >
+                      <Text style={s.removeT}>Remove</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={s.entryActs}>
+                    <Pressable hitSlop={8} onPress={() => refill(e)}>
+                      <Text style={s.fixT}>Fix</Text>
+                    </Pressable>
+                    <Pressable hitSlop={8} onPress={() => setConfirmId(e.id)}>
+                      <Text style={s.delT}>✕</Text>
+                    </Pressable>
+                  </View>
+                )}
+                <Text style={s.moneyBig2}>+{formatMoney(e.amountMinor)}</Text>
               </View>
-              <Text style={s.moneyBig2}>+{formatMoney(e.amountMinor)}</Text>
+              {confirmId === e.id && (
+                <Text style={s.warnT}>
+                  Removes {formatMoney(e.amountMinor)} and un-sets{" "}
+                  {formatMoney(e.titheMinor)} tithes · {formatMoney(e.savingsMinor)} savings ·{" "}
+                  {formatMoney(e.emergencyMinor)} emergency · {formatMoney(e.communityMinor)} community.
+                  {" "}Available for expenditure drops by {formatMoney(e.spendableMinor)}.
+                </Text>
+              )}
             </View>
           ))}
         </>
@@ -287,4 +363,17 @@ const s = StyleSheet.create({
   line: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderColor: light.border },
   lineT: { fontWeight: "600" },
   moneyBig2: { fontVariant: ["tabular-nums"], fontWeight: "700", color: light.primary },
+  entry: { borderBottomWidth: 1, borderColor: light.border, paddingVertical: 8 },
+  entryOn: { backgroundColor: light.surface, borderRadius: 12, paddingHorizontal: 8 },
+  entryRow: { flexDirection: "row", alignItems: "center" },
+  entryTap: { flex: 1, paddingVertical: 4, paddingRight: 8 },
+  entryActs: { flexDirection: "row", alignItems: "center", marginRight: 10 },
+  fixT: { color: light.info, fontWeight: "700", fontSize: 13, marginRight: 14 },
+  delT: { color: light.danger, fontWeight: "700", fontSize: 15 },
+  cancelT: { color: light.text2, fontWeight: "700", fontSize: 13, marginRight: 14 },
+  removeT: { color: light.danger, fontWeight: "700", fontSize: 13 },
+  warnT: { color: light.danger, fontSize: 12, marginTop: 6, lineHeight: 17 },
+  fixBar: { flexDirection: "row", alignItems: "center", backgroundColor: "#EFF6FF", borderWidth: 1, borderColor: "#BFDBFE", borderRadius: 12, padding: 10, marginTop: 14 },
+  fixBarT: { flex: 1, color: light.text, fontSize: 12, lineHeight: 17 },
+  fixBarX: { color: light.info, fontWeight: "700", fontSize: 12, paddingLeft: 10 },
 });

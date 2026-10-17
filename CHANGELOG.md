@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — remove & fix an income entry, remove a gift
+
+- **Income entries can be removed.** Each row in *Entries in <month>* has a `✕`; removing asks for a
+  confirming tap that names exactly what it un-sets (`300,000` salary → `−30,000` tithes, `−45,000`
+  savings, `−15,000` emergency, `−15,000` community, `−195,000` available for expenditure).
+- **Income entries can be fixed.** Tap a row (or *Fix*) and its amount, source, note and month load back
+  into the form; saving then **replaces** the entry — the corrected record is written first, the old one
+  removed after, so nothing is ever counted twice. Every row keeps its own split snapshot, so a
+  correction re-runs the split instead of silently rewriting history.
+- **Community gifts can be removed.** Each row in *Recent gifts* has a `✕` with a confirming tap; the
+  amount returns to *remaining to give* so it can be recorded again correctly.
+- Deletes are soft (`is_deleted = 1`) and queued like expenses, so offline maths and the next sync agree.
+  No migration: every table already carried `is_deleted` + `rev`.
+- Fixing an entry scrolls the form back into view.
+
 ## Unreleased — income sources (salary, business, side hustle, gift)
 
 - New `income_sources` list, seeded with **Salary · Business · Side hustle · Gift / Support · Other**

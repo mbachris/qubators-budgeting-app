@@ -279,6 +279,35 @@ export async function deleteExpense(id) {
   await enqueue("expenses", id, "delete", { id, isDeleted: true, updatedAt: t });
 }
 
+// ------------------------------------------------------------------ income
+// Soft delete: the row stays, flagged, so the sync queue and every month total
+// stay consistent and the server applies the same rule on the next sync.
+export async function deleteIncome(id) {
+  const db = await getDB();
+  const t = now();
+  await run(db,"UPDATE income_entries SET is_deleted=1, updated_at=? WHERE id=?", t, id);
+  await enqueue("income_entries", id, "delete", { id, isDeleted: true, updatedAt: t });
+}
+
+// Removing a gift hands the money back to "remaining to give", so any project
+// credit it created has to come off too.
+export async function deletePayout(id) {
+  const db = await getDB();
+  const t = now();
+  const row = await db.getFirstAsync(
+    "SELECT project_id AS projectId, amount_minor AS amountMinor FROM payouts WHERE id=?",
+    id
+  );
+  await run(db,"UPDATE payouts SET is_deleted=1, updated_at=? WHERE id=?", t, id);
+  await enqueue("payouts", id, "delete", { id, isDeleted: true, updatedAt: t });
+  if (row && row.projectId) {
+    await run(db,
+      "UPDATE projects_cache SET raised_minor = MAX(0, raised_minor - ?) WHERE id = ?",
+      row.amountMinor, row.projectId
+    );
+  }
+}
+
 export async function listExpensesByPeriod(period) {
   const db = await getDB();
   return db.getAllAsync(
