@@ -13,7 +13,7 @@ const THEME = {
 };
 
 // A sticky saying on open, then again every few minutes while the app is used.
-export default function TipModal({ intervalMs = 7 * 60 * 1000, delayMs = 1200 }) {
+export default function TipModal({ intervalMs = 3 * 60 * 1000, delayMs = 1200 }) {
   const [tip, setTip] = useState(null);
   const lastId = useRef(null);
   const anim = useRef(new Animated.Value(0)).current;

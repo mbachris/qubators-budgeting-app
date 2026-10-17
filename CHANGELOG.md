@@ -52,7 +52,7 @@
   (tithes, savings, emergency, community given/remaining, ceremonies vs society).
 - **Community tab is exactly two categories**: Ceremonies and Society. Project gifting removed from the UI.
 - **Tip popup redesigned**: themed accent bar, category chip, large quote mark, animated entry,
-  *Another one* / *Got it*. Still 18 sayings, still every 7 minutes.
+  *Another one* / *Got it*. Still 18 sayings, now every 3 minutes.
 - Phone schema v4 adds `income_entries.emergency_minor` (kept data, no reset). Server `002` adds the column + rule.
 
 ## Unreleased — money model v2 (deductions + monthly pots)
