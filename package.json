@@ -1,0 +1,13 @@
+{
+  "name": "qubators-budgeting-app",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": ["apps/mobile", "apps/server", "packages/domain"],
+  "scripts": {
+    "mobile": "npm --workspace apps/mobile run start",
+    "server:dev": "npm --workspace apps/server run dev",
+    "test": "npm --workspace packages/domain run test",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "engines": { "node": ">=20" }
+}

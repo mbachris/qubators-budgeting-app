@@ -33,8 +33,8 @@ The application is designed to remove the friction of manual budgeting through a
 ---
 
 ## 4. Technical Architecture & Design Philosophy
-* **Offline-First Mobile APK**: Recognizing that users want absolute ownership and reliability, the application is built primarily as an Android APK (mobile app) rather than relying solely on a web browser.
-* **Local Data Storage**: Critical data such as income logs, expense records, and budget allocations is stored securely and locally on the user's device. This ensures complete privacy and allows users to manage their budgets even without an active internet connection.
+* **Offline-First Mobile APK**: Recognizing that users want absolute ownership and reliability, the application is built primarily as an Android APK (mobile app) rather than relying solely on a web browser. 
+* **Local Data Storage**: Critical data—such as income logs, expense records, and budget allocations—is stored securely and locally on the user's device. This ensures complete privacy and allows users to manage their budgets even without an active internet connection.
 * **AI-Assisted Development**: Leveraging modern AI development tools enables rapid, high-quality iteration while keeping initial development overhead and technical debt exceptionally low.
 
 ---
@@ -42,7 +42,7 @@ The application is designed to remove the friction of manual budgeting through a
 ## 5. Business Model & Sustainability Strategy
 To ensure long-term viability and growth, the project operates on a hybrid social enterprise model:
 * **Free Core Tier**: All essential budgeting tools, email membership registration, local offline tracking, and basic community participation features remain entirely free for everyone.
-* **Freemium Expansion**: Advanced tools such as deep financial analytics, automated goal-tracking insights, and seamless cloud synchronization are offered via a premium subscription model.
+* **Freemium Expansion**: Advanced tools—such as deep financial analytics, automated goal-tracking insights, and seamless cloud synchronization—are offered via a premium subscription model.
 * **Community & Business Partnerships**: The platform integrates sponsorships and partnerships with local businesses that wish to support community sustainability projects, creating a win-win ecosystem where local commerce helps fund local growth.
 
 ---

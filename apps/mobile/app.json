@@ -1,0 +1,1 @@
+{"name":"Qubators","slug":"qubators-budgeting-app","version":"0.0.0","orientation":"portrait","scheme":"qubators","platforms":["android"],"android":{"package":"com.qubators.budgeting","versionCode":1},"plugins":["expo-sqlite"]}

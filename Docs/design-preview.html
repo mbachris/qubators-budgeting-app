@@ -1,0 +1,62 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Qubators Design System Preview</title>
+<style>
+:root{--bg:#F8FAFC;--surface:#fff;--s2:#F1F5F9;--border:#E2E8F0;--text:#0F172A;--t2:#475569;--t3:#94A3B8;--p:#16A34A;--pd:#15803D;--a:#F59E0B;--d:#DC2626;--i:#2563EB}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+.wrap{max-width:960px;margin:0 auto;padding:24px}
+h1{font-size:28px;margin:8px 0}h2{font-size:20px;margin:28px 0 12px}.sub{color:var(--t2)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.swatch{flex:1 1 140px;border-radius:12px;padding:12px;color:#fff;font-size:13px}.swatch small{display:block;opacity:.85}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:48px;padding:0 20px;border-radius:12px;border:1px solid transparent;font-weight:600;cursor:pointer}
+.b-p{background:var(--p);color:#fff}.b-s{background:#fff;border-color:var(--border)}.b-g{background:transparent;color:var(--p)}.b-d{background:var(--d);color:#fff}
+.input{width:100%;height:52px;border:1px solid var(--border);border-radius:12px;padding:0 14px;font-size:20px;font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--s2);border-radius:999px;overflow:hidden}.bar>i{display:block;height:100%}
+.badge{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.tabs{display:flex;background:var(--s2);border-radius:12px;padding:4px}.tabs span{flex:1;text-align:center;padding:10px;border-radius:8px}.tabs .on{background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.list{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--border)}.dot{width:12px;height:12px;border-radius:50%}
+.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,Consolas,monospace}
+.dark{background:#020617;color:#F8FAFC;border-color:#1E293B}.dark .card{background:#0F172A;border-color:#1E293B}.dark .tabs{background:#1E293B}.dark .tabs .on{background:#0F172A}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:640px){.grid{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<h1>Qubators Design System — Preview</h1>
+<p class="sub">Tokens + core components. Light shown, dark sample at bottom. Money in tabular mono.</p>
+<h2>Colors</h2>
+<div class="row">
+<div class="swatch" style="background:#16A34A">primary-600<small>#16A34A</small></div>
+<div class="swatch" style="background:#F59E0B">accent community<small>#F59E0B</small></div>
+<div class="swatch" style="background:#2563EB">savings/info<small>#2563EB</small></div>
+<div class="swatch" style="background:#8B5CF6">tithe<small>#8B5CF6</small></div>
+<div class="swatch" style="background:#DC2626">danger<small>#DC2626</small></div>
+<div class="swatch" style="background:#64748B">custom<small>#64748B</small></div>
+</div>
+<h2>Buttons / Inputs / Badges</h2>
+<div class="card"><div class="row">
+<button class="btn b-p">Save income</button><button class="btn b-s">Export</button>
+<button class="btn b-g">Cancel</button><button class="btn b-d">Delete</button>
+</div><p></p>
+<input class="input mono" value="100 000 BIF">
+<p></p><div class="row">
+<span class="badge" style="background:#F1F5F9">On this device</span>
+<span class="badge" style="background:#DCFCE7;color:#15803D">Synced 12:40</span>
+<span class="badge" style="background:#FEF3C7;color:#92400E">Pending 3</span>
+<span class="badge" style="background:#fff;border:1px solid #E2E8F0">Offline — will sync</span>
+</div></div>
+<h2>Dashboard sample</h2>
+<div class="grid">
+<div class="card"><b>October</b><div class="mono" style="font-size:28px">100 000 BIF</div>
+<p class="sub">Tithes 10 000 · Savings 15 000 · Community 5 000 · Living 70 000</p>
+<div class="bar"><i style="width:10%;background:#8B5CF6"></i></div><p></p>
+<div class="bar"><i style="width:15%;background:#2563EB"></i></div><p></p>
+<div class="bar"><i style="width:5%;background:#F59E0B"></i></div><p></p>
+<div class="bar"><i style="width:70%;background:#16A34A"></i></div></div>
+<div class="card"><b>Community</b>
+<div class="list"><span class="dot" style="background:#F59E0B"></span><span>Water point <small class="sub">goal 500 000</small></span><span class="mono" style="margin-left:auto">320 000</span></div>
+<div class="list"><span class="dot" style="background:#16A34A"></span><span>School kits <small class="sub">goal 200 000</small></span><span class="mono" style="margin-left:auto">45 000</span></div>
+<div class="tabs" style="margin-top:12px"><span class="on">Local Vault</span><span>Cloud Sync</span></div>
+</div></div>
+<h2>Dark sample</h2>
+<div class="card dark"><b>Dark surface</b><p class="sub" style="color:#CBD5E1">Text-2 on dark, primary #22C55E</p>
+<button class="btn" style="background:#22C55E;color:#052e16">Save income</button></div>
+<p class="sub">Spec: Docs/design-system.md · Touch ≥44pt · AA contrast · tabular money · BIF/RWF/USD</p>
+</div></body></html>

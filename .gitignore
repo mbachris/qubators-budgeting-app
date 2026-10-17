@@ -1,0 +1,30 @@
+# Node
+node_modules/
+dist/
+build/
+.expo/
+.eas/
+
+# Expo / React Native
+*.jks
+*.keystore
+android/
+ios/
+
+# Env / secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Logs / tmp
+npm-debug.log*
+*.log
+tmp/
