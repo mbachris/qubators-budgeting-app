@@ -9,3 +9,16 @@
 # ADR-005 Auth (Better Auth, optional)
 - Guest default full-function. Settings > Cloud Sync email OTP via Better Auth (Hono + Drizzle pg).
 - Login backfills user_id, pushes queue. Logout keeps local. Secrets server-only.
+# ADR-006 Money model: allocations are deductions, spending is monthly
+- The deduction buckets are NOT spending categories. Every income is split immediately:
+  tithe 10%, savings 15%, emergency 5%, community 5% — the remaining **65%** is the spendable pot.
+- Each `income_entries` row stores its own snapshot (`tithe_minor … spendable_minor`) so later
+  rule changes never rewrite history.
+- Tithe, savings and emergency are **given by default** the moment income arrives (no user action);
+  only community giving is tracked, under exactly two categories: `ceremonies` and `society`.
+- Expenses belong to a month pot (`period = YYYY-MM`) and to a user-defined `expense_categories`
+  row of kind `bill` (fixed monthly, amount remembered) or `daily`.
+- Rejected: treating buckets as spending budgets (mixes two different ideas); one global spendable
+  balance (loses the per-month story); asking the user to confirm tithes/savings every month (noise).
+- Dev note: model changes bumped phone `PRAGMA user_version` (v2 reset, v3/v4 additive ALTERs) and server
+  `sql/002_model_v2.sql` drops the v1 domain tables.

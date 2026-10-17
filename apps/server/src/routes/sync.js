@@ -7,10 +7,18 @@ export const sync = new Hono();
 
 // Whitelist table → allowed columns (snake_case). Nothing is interpolated from raw user input.
 const COLUMNS = {
-  categories: ["id", "name", "percent", "kind", "sort", "user_id", "updated_at", "is_deleted", "rev"],
-  income_entries: ["id", "amount_minor", "currency", "note", "occurred_at", "user_id", "updated_at", "is_deleted", "rev"],
-  expenses: ["id", "category_id", "amount_minor", "note", "occurred_at", "user_id", "updated_at", "is_deleted", "rev"],
-  contributions: ["id", "project_id", "amount_minor", "device_id", "user_id", "updated_at", "is_deleted", "rev"],
+  allocation_rules: ["id", "name", "percent", "kind", "sort", "user_id", "updated_at", "is_deleted", "rev"],
+  income_entries: [
+    "id", "amount_minor", "currency", "note", "occurred_at", "period",
+    "tithe_minor", "savings_minor", "emergency_minor", "community_minor", "spendable_minor",
+    "user_id", "updated_at", "is_deleted", "rev",
+  ],
+  expense_categories: [
+    "id", "name", "kind", "default_amount_minor", "due_day", "sort",
+    "user_id", "updated_at", "is_deleted", "rev",
+  ],
+  expenses: ["id", "category_id", "period", "amount_minor", "note", "occurred_at", "user_id", "updated_at", "is_deleted", "rev"],
+  payouts: ["id", "bucket", "category", "project_id", "amount_minor", "note", "occurred_at", "period", "user_id", "updated_at", "is_deleted", "rev"],
 };
 const TABLES = Object.keys(COLUMNS);
 
@@ -55,9 +63,13 @@ sync.post("/push", async (c) => {
     const updates = cols.filter((k) => k !== "id").map((k) => `${k} = EXCLUDED.${k}`).join(", ");
 
     await db.execute(
-      sql`INSERT INTO ${sql.raw(r.table)} (${sql.raw(cols.join(", "))})
-          VALUES (${sql.join(values.map((v) => sql`${v}`), sql`, `)})
-          ON CONFLICT (id) DO UPDATE SET ${sql.raw(updates)}`
+      updates
+        ? sql`INSERT INTO ${sql.raw(r.table)} (${sql.raw(cols.join(", "))})
+               VALUES (${sql.join(values.map((v) => sql`${v}`), sql`, `)})
+               ON CONFLICT (id) DO UPDATE SET ${sql.raw(updates)}`
+        : sql`INSERT INTO ${sql.raw(r.table)} (${sql.raw(cols.join(", "))})
+               VALUES (${sql.join(values.map((v) => sql`${v}`), sql`, `)})
+               ON CONFLICT (id) DO NOTHING`
     );
     applied.push(r.id);
   }
@@ -82,8 +94,15 @@ sync.get("/pull", async (c) => {
   return c.json({ rows: out, serverTime: Date.now() });
 });
 
-// Verified community projects (public).
+// Verified community projects (public) with community payouts folded into `raised_minor`.
 sync.get("/projects", async (c) => {
-  const res = await db.execute(sql`SELECT * FROM projects ORDER BY id`);
+  const res = await db.execute(sql`
+    SELECT p.id, p.name, p.goal_minor, p.cover_url, p.updated_at,
+           (p.raised_minor + COALESCE((
+             SELECT SUM(x.amount_minor) FROM payouts x
+             WHERE x.project_id = p.id AND x.is_deleted = FALSE
+           ), 0))::BIGINT AS raised_minor
+    FROM projects p ORDER BY p.id
+  `);
   return c.json({ rows: res.rows ?? [], serverTime: Date.now() });
 });

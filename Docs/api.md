@@ -1,6 +1,6 @@
 # API v0.1 (local device only, no Vercel)
 
-Base: `http://localhost:3000` on PC, `http://192.168.1.171:3000` from phone on same WiFi.
+Base: `http://localhost:3000` on PC, `http://<PC-LAN-IP>:3000` from phone on same WiFi (editable in the app under Settings → Server URL).
 
 ## Auth — Better Auth (email OTP)
 - `POST /api/auth/email-otp/send-verification-otp` `{ email, type: "sign-in" }`
@@ -10,11 +10,22 @@ Base: `http://localhost:3000` on PC, `http://192.168.1.171:3000` from phone on s
 
 ## Sync
 - `POST /sync/push` `{ deviceId, rows: [{ table, id, data, updatedAt, isDeleted? }] }`
-  Tables: `categories | income_entries | expenses | contributions`.
+  Tables: `allocation_rules | income_entries | expense_categories | expenses | payouts`.
   LWW on `updated_at` (ms). Older incoming rows returned in `conflicts` so the phone adopts the server row.
   Auth optional: logged-in rows get `user_id`; guest pushes keep `user_id` NULL.
 - `GET /sync/pull?since=<ms>` → `{ rows: [{table, rows}], serverTime }`. Guest → empty.
-- `GET /sync/projects` → verified community projects (public).
+- `GET /sync/projects` → verified community projects (public). `raised_minor` = seeded amount + sum of
+  community `payouts` for that project, so the tally grows as members give.
+
+## Money model (v2)
+- `allocation_rules` — deduction rules applied to every income: tithe 10%, savings 15%, emergency 5%,
+  community 5%; `living` (65%) is the spendable remainder.
+- `income_entries` — each row stores its own snapshot: `tithe_minor`, `savings_minor`, `emergency_minor`,
+  `community_minor`, `spendable_minor`, plus `period` (`YYYY-MM`).
+- `expense_categories` — user-defined spending categories, `kind = 'bill' | 'daily'`.
+- `expenses` — spending inside a month pot, tagged with `category_id` and `period`.
+- `payouts` — community giving only: `bucket='community'` with `category = ceremonies | society`.
+  Tithe, savings and emergency are treated as given automatically, so they need no payout rows.
 
 ## Blobs — Cloudflare R2
 - `POST /uploads/presign` `{ filename, contentType }` (session required) → `{ url, key, expiresIn }`

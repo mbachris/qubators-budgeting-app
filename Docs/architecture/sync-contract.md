@@ -1,11 +1,15 @@
-# Sync contract v0.1 (phone SQLite ⇄ server Postgres, Better Auth optional)
+# Sync contract v0.2 (phone SQLite ⇄ server Postgres, Better Auth optional)
 
 Phone is truth offline. Server is truth online. Last-write-wins by `updatedAt`, deletes win via `isDeleted=1`.
+
+Synced tables (v2 model): `allocation_rules`, `income_entries`, `expense_categories`, `expenses`, `payouts`.
 
 ## Push (phone → server)
 `POST /sync/push` `{ deviceId, rows: [{ table, id, data, updatedAt, isDeleted }] }`
 - Server upserts where incoming.updatedAt > existing.updatedAt.
-- Response `{ ok, applied: [ids], conflicts: [{ id, serverRow }] }` — phone applies serverRow on conflict.
+- `data` keys are camelCase; the server converts them to `snake_case` and keeps only whitelisted columns.
+- Response `{ ok, applied: [ids], conflicts: [{ table, id, serverRow }] }` — phone adopts `serverRow` on conflict.
+  Pulled rows are normalised on the phone (Postgres returns BIGINT as string, BOOLEAN as true/false).
 
 Queue: every local write inserts into `sync_queue { tableName, rowId, op, payload }`. `Sync Now` drains FIFO, increments `tries`, drops on 200.
 

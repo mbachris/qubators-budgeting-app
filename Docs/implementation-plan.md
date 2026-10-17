@@ -2,6 +2,17 @@
 
 Source: `Docs/project_concept.md` — offline-first mobile APK, local storage, auto-allocation 10% Tithes / 15% Savings / 5% Community / remainder Living Expenses, customizable, free core + freemium later.
 
+## Progress (live)
+- **M1 (Slices 0–2): done** — scaffold, Compose Postgres, design system + preview, ADRs, sync contract.
+- **M2 (Slices 3–4): done** — allocation engine 5/5 tests green; dual persistence (SQLite phone, Postgres + SQL migration server).
+- **M3 (Slice 5): done** — usable loop verified on device; both storage features visible.
+- **M4 (Slices 7–8): partially done** — `v0.1.0` APK built via EAS (preview/APK profile) and installed; cloud sync verified into Postgres.
+- Remaining: customisable deduction percentages, onboarding, custom icon/splash, dark theme toggle, R2 backup upload.
+- **Model v2 (feedback)**: allocations are deductions off income (tithe 10 / savings 15 / community 5), the
+  70% remainder is the spendable pot; month pots (`period`); user-defined expense categories split into
+  **bills** (fixed monthly, remembered amount) and **everyday**; payouts track tithe given / savings moved /
+  community given; Home has a month navigator. Local + server data reset for the new schema.
+
 Current state:
 - Local: `Docs/project_concept.md`, `Docs/implementation-plan.md` (this file)
 - GitHub `mbachris/qubators-budgeting-app`: `README.md` + `Docs/project_concept.md`

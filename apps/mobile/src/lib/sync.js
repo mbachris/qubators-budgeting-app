@@ -27,7 +27,7 @@ export async function syncNow(lastPulledAt = 0) {
     if (!push.ok) return { state: "error", status: push.status, data: push.data };
     applied = push.data?.applied?.length ?? 0;
     for (const con of push.data?.conflicts ?? []) {
-      await applyServerRow(con.id, con.table, con.serverRow);
+      await applyServerRow(con.table, con.serverRow);
       conflicts++;
     }
     await deleteQueue(queued.map((q) => q.id));
@@ -36,7 +36,7 @@ export async function syncNow(lastPulledAt = 0) {
   const pulled = await pull(lastPulledAt);
   for (const group of pulled.data?.rows ?? []) {
     for (const row of group.rows ?? []) {
-      await applyServerRow(row.id, group.table, row);
+      await applyServerRow(group.table, row);
     }
   }
 
@@ -61,7 +61,12 @@ export async function cacheProjects(rows) {
        VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
        name=EXCLUDED.name, goal_minor=EXCLUDED.goal_minor,
        raised_minor=EXCLUDED.raised_minor, cover_url=EXCLUDED.cover_url, updated_at=EXCLUDED.updated_at`,
-      p.id, p.name, p.goal_minor, p.raised_minor, p.cover_url ?? null, Number(p.updated_at ?? Date.now())
+      p.id,
+      p.name,
+      Number(p.goal_minor ?? 0),
+      Number(p.raised_minor ?? 0),
+      p.cover_url ?? null,
+      Number(p.updated_at ?? Date.now())
     );
   }
 }

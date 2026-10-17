@@ -1,17 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
-import { light } from "../theme/tokens";
+import { light, formatMoney } from "../theme/tokens";
 import { exportAll } from "../db/repo";
-import { sendOtp, signInWithOtp, getSession, logout, API_URL } from "../lib/api";
+import { sendOtp, signInWithOtp, getSession, logout, getBaseUrl, setBaseUrl, health } from "../lib/api";
 import { syncNow } from "../lib/sync";
 
-export default function Settings({ online, setOnline, pending, refresh }) {
+export default function Settings({ online, setOnline, pending, refresh, lifetime, rules = [], onReset }) {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [stage, setStage] = useState("idle"); // idle | otp-sent
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [lastSync, setLastSync] = useState(0);
+  const [serverUrl, setServerUrl] = useState("");
+  const [urlStatus, setUrlStatus] = useState("");
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  useEffect(() => { getBaseUrl().then(setServerUrl); }, []);
 
   const run = async (fn) => {
     setBusy(true);
@@ -28,9 +33,59 @@ export default function Settings({ online, setOnline, pending, refresh }) {
         <Text style={s.m}>Pending uploads: {pending}</Text>
       </View>
 
+      {lifetime && (
+        <View style={s.card}>
+          <Text style={s.t}>All time</Text>
+          <KV k="Total income" v={formatMoney(lifetime.incomeMinor)} />
+          <KV k="Total spent" v={formatMoney(lifetime.spentMinor)} />
+          <KV k="Available for expenditure (all time)" v={formatMoney(lifetime.spendableLeft)} />
+          <KV k="Tithes given (10%)" v={formatMoney(lifetime.tithePaid)} />
+          <KV k="Savings given (15%)" v={formatMoney(lifetime.savingsGiven)} />
+          <KV k="Emergency fund (5%)" v={formatMoney(lifetime.emergencyGiven)} />
+          <KV k="Community given (5%)" v={formatMoney(lifetime.communityGiven)} />
+          <KV k="Community remaining" v={formatMoney(lifetime.communityRemaining)} />
+          <KV k="Community — Ceremonies" v={formatMoney(lifetime.communityByCategory?.ceremonies ?? 0)} />
+          <KV k="Community — Society" v={formatMoney(lifetime.communityByCategory?.society ?? 0)} />
+        </View>
+      )}
+
+      <View style={s.card}>
+        <Text style={s.t}>Allocation rules</Text>
+        {rules.map((r) => (
+          <KV key={r.id} k={r.kind === "living" ? "Spendable (Living)" : r.name} v={`${r.percent}%`} />
+        ))}
+        <Text style={s.m}>Editing these comes with the customisation slice.</Text>
+      </View>
+
+      <View style={s.card}>
+        <Text style={s.t}>Server URL</Text>
+        <Text style={s.m}>Your PC's address on this WiFi. Change it when the IP changes — no rebuild needed.</Text>
+        <TextInput
+          style={s.in}
+          autoCapitalize="none"
+          keyboardType="url"
+          placeholder="http://192.168.10.163:3000"
+          value={serverUrl}
+          onChangeText={setServerUrl}
+        />
+        <Pressable
+          style={[s.btnGhost, busy && s.off]}
+          disabled={busy}
+          onPress={() => run(async () => {
+            const clean = await setBaseUrl(serverUrl);
+            setServerUrl(clean);
+            const r = await health(clean);
+            setUrlStatus(r.ok ? `Reachable — ${r.data?.service ?? "ok"}` : `Not reachable (${r.status || "network error"})`);
+          })}
+        >
+          <Text style={s.btGhost}>Save & test</Text>
+        </Pressable>
+        {!!urlStatus && <Text style={s.m}>{urlStatus}</Text>}
+      </View>
+
       <View style={s.card}>
         <Text style={s.t}>Cloud Sync — {online ? "On" : "Off"}</Text>
-        <Text style={s.m}>{API_URL}</Text>
+        <Text style={s.m}>{serverUrl || "…"}</Text>
 
         {!online && stage === "idle" && (
           <>
@@ -111,14 +166,42 @@ export default function Settings({ online, setOnline, pending, refresh }) {
         style={s.card}
         onPress={() => run(async () => {
           const data = await exportAll();
-          setStatus(`Export built: ${data.income.length} income, ${data.categories.length} categories.`);
+          setStatus(`Export built: ${data.income.length} income rows, ${data.expenses.length} expenses, ${data.payouts.length} payouts.`);
         })}
       >
         <Text style={s.t}>Backup / Export</Text>
-        <Text style={s.m}>JSON snapshot of local data (R2 upload in Phase 6).</Text>
+        <Text style={s.m}>JSON snapshot of local data (R2 upload comes with the backup slice).</Text>
       </Pressable>
 
+      <View style={s.card}>
+        <Text style={s.t}>Reset local data</Text>
+        <Text style={s.m}>Deletes everything on this device and re-seeds the default bills and categories.</Text>
+        <Pressable
+          style={[s.btnDanger, busy && s.off]}
+          disabled={busy}
+          onPress={() => {
+            if (!confirmReset) { setConfirmReset(true); setStatus("Tap again to confirm the reset."); return; }
+            run(async () => {
+              await onReset?.();
+              setConfirmReset(false);
+              setStatus("Local data reset.");
+            });
+          }}
+        >
+          <Text style={s.bt}>{confirmReset ? "Tap again to confirm" : "Reset local data"}</Text>
+        </Pressable>
+      </View>
+
       {!!lastSync && <Text style={s.m}>Last sync: {new Date(lastSync).toLocaleTimeString()}</Text>}
+    </View>
+  );
+}
+
+function KV({ k, v }) {
+  return (
+    <View style={s.kv}>
+      <Text style={s.k}>{k}</Text>
+      <Text style={s.v}>{v}</Text>
     </View>
   );
 }
@@ -128,8 +211,12 @@ const s = StyleSheet.create({
   card: { backgroundColor: light.surface, borderWidth: 1, borderColor: light.border, borderRadius: 16, padding: 12, marginTop: 8 },
   t: { fontWeight: "600" },
   m: { color: light.text2, marginTop: 2 },
-  in: { height: 48, borderWidth: 1, borderColor: light.border, borderRadius: 12, paddingHorizontal: 14, marginTop: 8 },
+  kv: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
+  k: { color: light.text2, flexShrink: 1, paddingRight: 8 },
+  v: { fontVariant: ["tabular-nums"], fontWeight: "600" },
+  in: { height: 48, borderWidth: 1, borderColor: light.border, borderRadius: 12, paddingHorizontal: 14, marginTop: 8, backgroundColor: light.surface },
   btn: { backgroundColor: light.primary, borderRadius: 12, height: 44, alignItems: "center", justifyContent: "center", marginTop: 10 },
+  btnDanger: { backgroundColor: light.danger, borderRadius: 12, height: 44, alignItems: "center", justifyContent: "center", marginTop: 10 },
   off: { opacity: 0.4 },
   bt: { color: "#fff", fontWeight: "700" },
   btnGhost: { borderWidth: 1, borderColor: light.border, borderRadius: 12, height: 44, alignItems: "center", justifyContent: "center", marginTop: 8 },

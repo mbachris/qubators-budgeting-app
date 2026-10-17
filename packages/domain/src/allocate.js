@@ -8,8 +8,9 @@
 export const DEFAULT_RULES = [
   { id: "tithe", name: "Tithes / Giving", percent: 10, kind: "tithe" },
   { id: "savings", name: "Savings & Wealth", percent: 15, kind: "saving" },
+  { id: "emergency", name: "Emergency fund", percent: 5, kind: "emergency" },
   { id: "community", name: "Community Impact", percent: 5, kind: "community" },
-  { id: "living", name: "Living Expenses", percent: 70, kind: "living" },
+  { id: "living", name: "Spendable (Living)", percent: 65, kind: "living" },
 ];
 
 export function validateRules(rules) {

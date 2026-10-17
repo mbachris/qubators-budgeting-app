@@ -5,9 +5,9 @@ import { allocateIncome, DEFAULT_RULES } from "../src/allocate.js";
 const sum = (rows) => rows.reduce((a, r) => a + r.amountMinor, 0);
 const byId = (rows) => Object.fromEntries(rows.map((r) => [r.id, r.amountMinor]));
 
-test("100 000 splits 10/15/5/70 exactly", () => {
+test("100 000 splits 10/15/5/5/65 exactly", () => {
   const rows = allocateIncome(100000, DEFAULT_RULES);
-  assert.deepEqual(byId(rows), { tithe: 10000, savings: 15000, community: 5000, living: 70000 });
+  assert.deepEqual(byId(rows), { tithe: 10000, savings: 15000, emergency: 5000, community: 5000, living: 65000 });
 });
 
 test("sum always equals input incl. rounding dust", () => {
