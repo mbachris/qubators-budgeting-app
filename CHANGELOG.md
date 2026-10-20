@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased — real backup: one file you can keep, and put back
+
+- **Back up now** (Settings) writes the whole local store to `budgetsafe-YYYY-MM-DD.json` and opens
+  Android's share sheet, so it can go straight to Gmail, Drive, WhatsApp or a USB cable. No account, no
+  server, no internet. The screen remembers when the last backup was made.
+- **Restore from a backup** picks that file, shows what is in it (entry count and date) and asks before
+  replacing anything — *"Everything on this phone is replaced by the file. This cannot be undone."*
+- The file contains every table, **soft-deleted rows included**, because a removal is part of the
+  record. Restore matches rows to the live table by column name, so a backup taken before a column was
+  added still restores. Restored rows are queued for Cloud Sync, stamped at restore time, so the phone's
+  copy wins over an older server copy instead of being overwritten by it.
+- Settings no longer reads like a developer console: *"On-device SQLite"*, *"Pending uploads: 0"* and
+  the raw server address are gone from the top of the screen. Storage now says *Saved on this phone*,
+  the PC's address sits behind **Connection details**, and Cloud Sync explains that it is for keeping
+  two devices in step — **not** a backup.
+- The fake *Backup / Export* button (it only printed row counts and wrote nothing) is removed.
+
 ## Unreleased — the app is now called **BudgetSafe**
 
 - The launcher name, the intro header and the tip card now say **BudgetSafe** (was Qubators).

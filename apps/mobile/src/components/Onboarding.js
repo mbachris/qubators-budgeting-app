@@ -97,8 +97,8 @@ export default function Onboarding({ rules = [], onDone }) {
               ))}
               <View style={s.rule} />
               <Text style={s.note}>
-                Works offline, on this phone, with no account. Cloud Sync is optional and can be switched on
-                later in Settings.
+                Works offline, on this phone, with no account. Cloud Sync is optional, and “Back up now”
+                in Settings writes one file you can mail to yourself or keep on a computer.
               </Text>
             </View>
           )}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { formatMoney } from "../theme/tokens";
 import { useTheme, useThemedStyles } from "../theme/ThemeProvider";
-import { exportAll } from "../db/repo";
+import { saveBackup, pickBackup, restoreBackup, lastBackup } from "../lib/backup";
 import { sendOtp, signInWithOtp, getSession, logout, getBaseUrl, setBaseUrl, health } from "../lib/api";
 import { syncNow } from "../lib/sync";
 
@@ -20,8 +20,13 @@ export default function Settings({ online, setOnline, pending, refresh, lifetime
   const [confirmReset, setConfirmReset] = useState(false);
   const [pct, setPct] = useState({});
   const [rulesMsg, setRulesMsg] = useState("");
+  const [backupMsg, setBackupMsg] = useState("");
+  const [lastSaved, setLastSaved] = useState("");
+  const [restore, setRestore] = useState(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => { getBaseUrl().then(setServerUrl); }, []);
+  useEffect(() => { lastBackup().then(setLastSaved); }, []);
 
   // Take the stored percentages into the boxes; a refresh after saving re-syncs them.
   useEffect(() => {
@@ -50,10 +55,80 @@ export default function Settings({ online, setOnline, pending, refresh, lifetime
       <Text style={s.h}>Settings</Text>
 
       <View style={s.card}>
-        <Text style={s.t}>Local Vault — Always on</Text>
-        <Text style={s.m}>On-device SQLite. Budgeting works offline, always.</Text>
-        <Text style={s.m}>Pending uploads: {pending}</Text>
+        <Text style={s.t}>Saved on this phone</Text>
+        <Text style={s.m}>
+          Your budget lives on this device and works with no internet. Nothing leaves the phone unless
+          you turn on Cloud Sync below.
+        </Text>
+        {pending > 0 && (
+          <Text style={s.m}>
+            {pending} change{pending === 1 ? "" : "s"} waiting to reach your PC.
+          </Text>
+        )}
       </View>
+
+      <View style={s.card}>
+        <Text style={s.t}>Backup</Text>
+        <Text style={s.m}>
+          One file with everything — income, expenses, giving, your categories. Mail it to yourself, save
+          it to Drive, or copy it to a computer. Keep it somewhere that is not this phone.
+        </Text>
+
+        <Pressable
+          style={[s.btn, busy && s.off]}
+          disabled={busy}
+          onPress={() => run(async () => {
+            const res = await saveBackup();
+            setBackupMsg(res.shareable
+              ? `${res.name} is ready — choose where to send it.`
+              : `Saved to ${res.name} on this phone.`);
+            setLastSaved(await lastBackup());
+          })}
+        >
+          <Text style={s.bt}>Back up now</Text>
+        </Pressable>
+
+        <Pressable
+          style={[s.btnGhost, busy && s.off]}
+          disabled={busy}
+          onPress={() => run(async () => {
+            const picked = await pickBackup();
+            if (picked) { setRestore(picked); setBackupMsg(""); }
+          })}
+        >
+          <Text style={s.btGhost}>Restore from a backup</Text>
+        </Pressable>
+
+        {!!lastSaved && <Text style={s.m}>Last backup: {lastSaved}</Text>}
+        {!!backupMsg && <Text style={s.m}>{backupMsg}</Text>}
+      </View>
+
+      {!!restore && (
+        <View style={s.card}>
+          <Text style={s.t}>Replace this phone's records?</Text>
+          <Text style={s.m}>{restore.name} — {restore.entries} entries, written {restore.when}.</Text>
+          <Text style={s.m}>
+            Everything on this phone is replaced by the file. This cannot be undone.
+          </Text>
+          <Pressable
+            style={[s.btnDanger, busy && s.off]}
+            disabled={busy}
+            onPress={() => run(async () => {
+              const name = restore.name;
+              const res = await restoreBackup(restore.data);
+              setRestore(null);
+              setLastSaved(await lastBackup());
+              setBackupMsg(`Restored ${res.rows} rows from ${name}.`);
+              await refresh();
+            })}
+          >
+            <Text style={s.bt}>Replace everything</Text>
+          </Pressable>
+          <Pressable style={s.btnGhost} disabled={busy} onPress={() => setRestore(null)}>
+            <Text style={s.btGhost}>Keep what I have</Text>
+          </Pressable>
+        </View>
+      )}
 
       <View style={s.card}>
         <Text style={s.t}>Appearance</Text>
@@ -147,34 +222,47 @@ export default function Settings({ online, setOnline, pending, refresh, lifetime
       </View>
 
       <View style={s.card}>
-        <Text style={s.t}>Server URL</Text>
-        <Text style={s.m}>Your PC's address on this WiFi. Change it when the IP changes — no rebuild needed.</Text>
-        <TextInput
-          style={s.in}
-          autoCapitalize="none"
-          keyboardType="url"
-          placeholder="http://192.168.10.163:3000"
-          value={serverUrl}
-          onChangeText={setServerUrl}
-        />
-        <Pressable
-          style={[s.btnGhost, busy && s.off]}
-          disabled={busy}
-          onPress={() => run(async () => {
-            const clean = await setBaseUrl(serverUrl);
-            setServerUrl(clean);
-            const r = await health(clean);
-            setUrlStatus(r.ok ? `Reachable — ${r.data?.service ?? "ok"}` : `Not reachable (${r.status || "network error"})`);
-          })}
-        >
-          <Text style={s.btGhost}>Save & test</Text>
-        </Pressable>
-        {!!urlStatus && <Text style={s.m}>{urlStatus}</Text>}
-      </View>
-
-      <View style={s.card}>
         <Text style={s.t}>Cloud Sync — {online ? "On" : "Off"}</Text>
-        <Text style={s.m}>{serverUrl || "…"}</Text>
+        <Text style={s.m}>
+          Optional. A second copy in your own database on your PC, over your WiFi. Everything works the
+          same without it — this is for keeping two devices in step, not for keeping a backup.
+        </Text>
+
+        <Pressable style={s.linkRow} onPress={() => setShowAdvanced((v) => !v)}>
+          <Text style={s.linkT}>
+            {showAdvanced ? "Hide connection details" : "Connection details"}
+          </Text>
+        </Pressable>
+
+        {showAdvanced && (
+          <>
+            <Text style={s.m}>
+              Your PC's address on this WiFi. Only change it if the address moved — no rebuild needed.
+              The current one is {serverUrl || "not set"}.
+            </Text>
+            <TextInput
+              style={s.in}
+              autoCapitalize="none"
+              keyboardType="url"
+              placeholder="http://192.168.10.163:3000"
+              value={serverUrl}
+              onChangeText={setServerUrl}
+            />
+            <Pressable
+              style={[s.btnGhost, busy && s.off]}
+              disabled={busy}
+              onPress={() => run(async () => {
+                const clean = await setBaseUrl(serverUrl);
+                setServerUrl(clean);
+                const r = await health(clean);
+                setUrlStatus(r.ok ? "Your PC answered." : "No answer from that address.");
+              })}
+            >
+              <Text style={s.btGhost}>Save & test</Text>
+            </Pressable>
+            {!!urlStatus && <Text style={s.m}>{urlStatus}</Text>}
+          </>
+        )}
 
         {!online && stage === "idle" && (
           <>
@@ -191,11 +279,13 @@ export default function Settings({ online, setOnline, pending, refresh, lifetime
               disabled={busy || !email.includes("@")}
               onPress={() => run(async () => {
                 const r = await sendOtp(email.trim());
-                if (r.ok) { setStage("otp-sent"); setStatus("Code sent — check the server console for the OTP."); }
-                else setStatus(`Failed (${r.status}). Is the server running?`);
+                if (r.ok) {
+                  setStage("otp-sent");
+                  setStatus("Code created. Because the server is yours, the code appears in its window on the PC.");
+                } else setStatus("Could not reach your PC. Check that it is on and on the same WiFi.");
               })}
             >
-              <Text style={s.bt}>Send code</Text>
+              <Text style={s.bt}>Send sign-in code</Text>
             </Pressable>
           </>
         )}
@@ -216,10 +306,10 @@ export default function Settings({ online, setOnline, pending, refresh, lifetime
                   const res = await syncNow(lastSync);
                   setLastSync(res.at ?? lastSync);
                   await refresh();
-                } else setStatus(`Verify failed (${r.status}).`);
+                } else setStatus("That code did not work. Ask for a new one.");
               })}
             >
-              <Text style={s.bt}>Verify & sync</Text>
+              <Text style={s.bt}>Sign in</Text>
             </Pressable>
           </>
         )}
@@ -230,8 +320,12 @@ export default function Settings({ online, setOnline, pending, refresh, lifetime
               const res = await syncNow(lastSync);
               if (res.state === "synced") {
                 setLastSync(res.at ?? lastSync);
-                setStatus(`Synced — pushed ${res.applied}, pulled ${res.pulled}, conflicts ${res.conflicts}.`);
-              } else setStatus(`Sync state: ${res.state}`);
+                const parts = [`${res.applied} sent`, `${res.pulled} received`];
+                if (res.conflicts) parts.push(`${res.conflicts} kept from the PC`);
+                setStatus(`Synced — ${parts.join(", ")}.`);
+              } else if (res.state === "offline") {
+                setStatus("Your PC did not answer. Nothing was lost — the changes wait here.");
+              } else setStatus(`Sync did not finish (${res.state}).`);
               await refresh();
             })}>
               <Text style={s.bt}>Sync now</Text>
@@ -250,17 +344,6 @@ export default function Settings({ online, setOnline, pending, refresh, lifetime
         {busy && <ActivityIndicator style={{ marginTop: 8 }} />}
         {!!status && <Text style={s.m}>{status}</Text>}
       </View>
-
-      <Pressable
-        style={s.card}
-        onPress={() => run(async () => {
-          const data = await exportAll();
-          setStatus(`Export built: ${data.income.length} income rows, ${data.expenses.length} expenses, ${data.payouts.length} payouts.`);
-        })}
-      >
-        <Text style={s.t}>Backup / Export</Text>
-        <Text style={s.m}>JSON snapshot of local data (R2 upload comes with the backup slice).</Text>
-      </Pressable>
 
       <View style={s.card}>
         <Text style={s.t}>How the app works</Text>

@@ -1,5 +1,6 @@
 import { getDB } from "./client";
 import { uuid, now } from "../lib/id";
+import { SCHEMA_VERSION } from "./schema";
 import { allocateIncome } from "../domain/allocate";
 import { periodOf, currentPeriod, stampInPeriod } from "../lib/period";
 
@@ -560,22 +561,75 @@ export async function applyServerRow(tableName, row) {
   );
 }
 
+// ------------------------------------------------------------ backup / restore
+// A backup is the whole local store — tombstones included, because a removal is part
+// of the story too — in one JSON file the user can keep anywhere. Restoring replaces
+// what is on the phone with the file, so the screen always asks first.
+const BACKUP_TABLES = [
+  "allocation_rules", "income_sources", "income_entries", "expense_categories",
+  "expenses", "payouts", "projects_cache",
+];
+
 export async function exportAll() {
   const db = await getDB();
-  const [allocationRules, income, expenseCategories, expenses, payouts, projects, incomeSources] = await Promise.all([
-    listAllocationRules(), db.getAllAsync("SELECT * FROM income_entries"),
-    listExpenseCategories(), db.getAllAsync("SELECT * FROM expenses"),
-    listPayouts(1000), listProjects(), listIncomeSources(),
-  ]);
+  const tables = {};
+  for (const t of BACKUP_TABLES) tables[t] = await db.getAllAsync(`SELECT * FROM ${t}`);
   return {
-    version: 2,
+    app: "BudgetSafe",
+    format: 3,
+    schemaVersion: SCHEMA_VERSION,
     exportedAt: now(),
-    allocationRules,
-    incomeSources,
-    income,
-    expenseCategories,
-    expenses,
-    payouts,
-    projects,
+    counts: Object.fromEntries(BACKUP_TABLES.map((t) => [t, tables[t].length])),
+    tables,
   };
+}
+
+// Rows are matched to the live table by column name, so a backup made before a
+// column was added still restores into the current schema.
+export async function importAll(data) {
+  if (!data || data.app !== "BudgetSafe" || data.format !== 3 || !data.tables) {
+    throw new Error("that file is not a BudgetSafe backup");
+  }
+  const rules = data.tables.allocation_rules;
+  if (!Array.isArray(rules) || !rules.some((r) => r.kind === "living")) {
+    throw new Error("the backup is missing its deduction rules");
+  }
+
+  const db = await getDB();
+  let rows = 0;
+  const restored = [];
+
+  await db.withTransactionAsync(async () => {
+    await db.runAsync("DELETE FROM sync_queue");
+    for (const t of [...BACKUP_TABLES].reverse()) await db.runAsync(`DELETE FROM ${t}`);
+
+    for (const t of BACKUP_TABLES) {
+      const list = data.tables[t];
+      if (!Array.isArray(list) || !list.length) continue;
+      const cols = (await db.getAllAsync("SELECT name FROM pragma_table_info(?)", t)).map((r) => r.name);
+      for (const row of list) {
+        const keys = Object.keys(row).filter((k) => cols.includes(k));
+        if (!keys.length) continue;
+        const sql = `INSERT OR REPLACE INTO ${t} (${keys.join(",")}) VALUES (${keys.map(() => "?").join(",")})`;
+        await db.runAsync(sql, ...keys.map((k) => {
+          const v = row[k];
+          if (v === undefined) return null;
+          if (typeof v === "boolean") return v ? 1 : 0;
+          return v;
+        }));
+        rows++;
+      }
+      restored.push(t);
+    }
+  });
+
+  // Queue the restored rows so a later Cloud Sync sends this state out: queue time is
+  // what the server compares on, so the phone's copy wins instead of being overwritten.
+  for (const t of restored) {
+    for (const row of data.tables[t]) {
+      if (row?.id) await enqueue(t, row.id, "upsert", row);
+    }
+  }
+
+  return { rows, at: now() };
 }

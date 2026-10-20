@@ -84,3 +84,22 @@
 - The status bar follows the mode. Rejected: forcing a reload after switching (visible flash and a
   full data re-read for a cosmetic change), and an OS-level `useColorScheme` only (the user asked for
   an in-app toggle, which must win over the system setting).
+
+# ADR-011 Backup: a file the user owns
+- **Backup is a file, not a sync.** Sync mirrors the phone to a Postgres on the user's own PC; if that
+  PC dies, or the phone is lost, sync has protected nothing. So *Back up now* exports every table to
+  JSON and hands it to Android's share sheet — mail it to yourself, Drive, USB. It needs no account, no
+  server and no internet, which is the only kind of backup an offline-first app can promise.
+- The file carries **`app`, `format` and `schemaVersion`**, and restore refuses anything that is not a
+  BudgetSafe backup or lacks a `living` deduction rule (without one the money model cannot run).
+- The file includes **soft-deleted rows**: a deletion is part of the record (ADR-008), and a restore that
+  silently resurrected removed entries would be worse than no restore.
+- Restore **replaces** rather than merges. Merging two histories with independent ids and timestamps
+  invents conflicts the user cannot adjudicate on a phone; replacing is honest and is confirmed first.
+  Rows are matched to the live table by column name, so an older file still restores.
+- Restored rows are queued for sync **at restore time**, so Cloud Sync pushes this state out instead of
+  pulling the older server copy back over it.
+- Rejected: R2 upload as the primary path (needs credentials and the server up — the backup should
+  survive the server), Google Drive API (an OAuth app, a review process, and a dependency on a company
+  account for a personal budget), and auto-backup on a timer (silent, unbounded storage use, and it
+  would hide the fact that the file needs to leave the phone).

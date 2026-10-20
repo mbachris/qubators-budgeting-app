@@ -11,7 +11,7 @@
   "userInterfaceStyle": "automatic",
   "android": {
     "package": "com.qubators.budgeting",
-    "versionCode": 4,
+    "versionCode": 5,
     "adaptiveIcon": {
       "foregroundImage": "./assets/adaptive-icon.png",
       "backgroundColor": "#16A34A"
@@ -28,7 +28,8 @@
         "resizeMode": "contain",
         "backgroundColor": "#16A34A"
       }
-    ]
+    ],
+    "expo-sharing"
   ],
   "extra": {
     "eas": {
