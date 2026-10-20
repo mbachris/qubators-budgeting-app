@@ -1,5 +1,5 @@
 {
-  "name": "Qubators",
+  "name": "BudgetSafe",
   "slug": "qubators-budgeting-app",
   "version": "1.0.0",
   "orientation": "portrait",
@@ -11,7 +11,7 @@
   "userInterfaceStyle": "automatic",
   "android": {
     "package": "com.qubators.budgeting",
-    "versionCode": 3,
+    "versionCode": 4,
     "adaptiveIcon": {
       "foregroundImage": "./assets/adaptive-icon.png",
       "backgroundColor": "#16A34A"

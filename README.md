@@ -1,6 +1,7 @@
-# Qubators Budgeting App
+# BudgetSafe
 
 Offline-first budgeting + community impact. Local Vault always on, Cloud Sync optional.
+(Repo and docs still say "Qubators" — that is the project's working name.)
 
 Docs: `Docs/project_concept.md`, `Docs/implementation-plan.md`, `Docs/design-system.md`
 

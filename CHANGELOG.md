@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — the app is now called **BudgetSafe**
+
+- The launcher name, the intro header and the tip card now say **BudgetSafe** (was Qubators).
+  `versionCode` 4. The Android package stays `com.qubators.budgeting` on purpose: changing it would
+  install a second, empty app and your existing records would be stranded in the old one. Renaming the
+  label does **not** affect the signing key, so an update over an existing install still needs the same
+  certificate (see the install note in the README).
+
 ## Unreleased — 1.0.0: your own percentages, a first-run intro, an identity, a dark theme
 
 - **Deduction percentages are yours to set.** *Settings → Deduction percentages* takes the four values

@@ -43,7 +43,7 @@ export default function Onboarding({ rules = [], onDone }) {
     <Modal transparent={false} animationType="fade" visible onRequestClose={onDone}>
       <View style={s.screen}>
         <View style={s.head}>
-          <Text style={s.brand}>QUBATORS</Text>
+          <Text style={s.brand}>BUDGETSAFE</Text>
           <Pressable hitSlop={10} onPress={onDone}>
             <Text style={s.skip}>Skip</Text>
           </Pressable>

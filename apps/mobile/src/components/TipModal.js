@@ -65,7 +65,7 @@ export default function TipModal({ intervalMs = 3 * 60 * 1000, delayMs = 1200 })
           <View style={[s.accent, { backgroundColor: theme.color }]} />
 
           <View style={s.head}>
-            <Text style={s.brand}>QUBATORS</Text>
+            <Text style={s.brand}>BUDGETSAFE</Text>
             <View style={[s.chip, { backgroundColor: c.surface2, borderColor: theme.color }]}>
               <Text style={[s.chipT, { color: theme.color }]}>{theme.label}</Text>
             </View>
