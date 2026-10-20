@@ -15,15 +15,12 @@ const EXPENSE_KIND = { bill: "Bill", goal: "Planned", daily: "Everyday" };
 
 export default function Home({
   period, summary, bills, goals = [], rules = [], categoryTotals = [], expenses = [], lifetime,
-  payouts = [], sourceTotals = [], pending = 0, online, setPeriod, go, onDeleteExpense,
+  payouts = [], sourceTotals = [], setPeriod, go, onDeleteExpense,
 }) {
   const { c, mode } = useTheme();
   const s = useThemedStyles(makeStyles);
   const cur = currentPeriod();
   const isCurrent = period === cur;
-  const badge = !online
-    ? "Local Vault • On this device"
-    : pending > 0 ? `Cloud Sync • Pending ${pending}` : "Cloud Sync • Synced";
 
   const spendable = summary?.spendableMinor ?? 0;
   const spent = summary?.spentMinor ?? 0;
@@ -50,8 +47,6 @@ export default function Home({
 
   return (
     <View>
-      <Text style={s.badge}>{badge}</Text>
-
       <View style={s.monthRow}>
         <Pressable style={s.nav} onPress={() => setPeriod(shiftPeriod(period, -1))}>
           <Text style={s.navT}>‹</Text>
@@ -319,7 +314,6 @@ function Row({ label, value, strong }) {
 }
 
 const makeStyles = (c) => ({
-  badge: { alignSelf: "flex-start", backgroundColor: "#F1F5F9", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, fontSize: 12, fontWeight: "700" },
   monthRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
   nav: { width: 44, height: 44, borderRadius: 999, borderWidth: 1, borderColor: c.border, alignItems: "center", justifyContent: "center", backgroundColor: c.surface },
   navOff: { opacity: 0.35 },

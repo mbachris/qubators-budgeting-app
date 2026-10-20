@@ -11,7 +11,7 @@
   "userInterfaceStyle": "automatic",
   "android": {
     "package": "com.qubators.budgeting",
-    "versionCode": 5,
+    "versionCode": 6,
     "adaptiveIcon": {
       "foregroundImage": "./assets/adaptive-icon.png",
       "backgroundColor": "#16A34A"
