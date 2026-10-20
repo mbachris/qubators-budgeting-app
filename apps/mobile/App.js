@@ -1,23 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { View, Text, Pressable, ScrollView, StatusBar } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import { light } from "./src/theme/tokens";
+import { ThemeProvider, useTheme, useThemedStyles } from "./src/theme/ThemeProvider";
 import {
   listIncomeByPeriod, listExpenseCategories, listExpensesByPeriod, expenseTotalsByCategory,
   billRows, listAllocationRules, listProjects, listPayouts, periodSummary, lifetimeTotals,
   addIncome, addExpense, deleteExpense, addExpenseCategory, setCategoryDefault, addPayout,
-  deleteIncome, deletePayout, setCategoryTarget, deleteExpenseCategory,
+  deleteIncome, deletePayout, setCategoryTarget, deleteExpenseCategory, setAllocationRules,
   goalRows, listIncomeSources, addIncomeSource, incomeBySource, incomeBySourceLifetime, queueCount,
 } from "./src/db/repo";
 import { resetDB } from "./src/db/client";
 import { currentPeriod, stampInPeriod } from "./src/lib/period";
 import { getToken } from "./src/lib/api";
+import { getPref, setPref } from "./src/lib/prefs";
 import Home from "./src/screens/Home";
 import AddIncome from "./src/screens/AddIncome";
 import Spend from "./src/screens/Spend";
 import Community from "./src/screens/Community";
 import Settings from "./src/screens/Settings";
 import TipModal from "./src/components/TipModal";
+import Onboarding from "./src/components/Onboarding";
 
 const TABS = [
   { id: "dash", label: "Home" },
@@ -28,6 +30,8 @@ const TABS = [
 ];
 
 function AppShell() {
+  const { c, mode } = useTheme();
+  const s = useThemedStyles(makeStyles);
   const [tab, setTab] = useState("dash");
   const [period, setPeriod] = useState(currentPeriod());
   const [summary, setSummary] = useState(null);
@@ -48,8 +52,21 @@ function AppShell() {
   const [online, setOnline] = useState(false);
   const [ready, setReady] = useState(false);
   const [err, setErr] = useState("");
+  // Starts true so the intro cannot flash while the preference is being read.
+  const [onboarded, setOnboarded] = useState(true);
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    let alive = true;
+    getPref("onboarded").then((v) => { if (alive) setOnboarded(v === "1"); });
+    return () => { alive = false; };
+  }, []);
+
+  const finishIntro = useCallback(async () => {
+    setOnboarded(true);
+    await setPref("onboarded", "1");
+  }, []);
 
   // Every write goes through here so a failed statement shows up as a message
   // instead of an unhandled promise rejection in the console banner.
@@ -111,6 +128,8 @@ function AppShell() {
     lifetime, pending, online, setOnline, go: setTab, refresh,
     // Fetching an old entry back into the form only helps if the form is in view.
     scrollToTop: () => scrollRef.current?.scrollTo({ y: 0, animated: true }),
+    // Settings can replay the three-screen intro.
+    onShowIntro: () => setOnboarded(false),
 
     // Income lands in the month you chose on the Income screen, tagged with its source.
     onSaveIncome: action("Saving income", async ({ amountMinor, period: p, sourceId, note }) => {
@@ -152,6 +171,13 @@ function AppShell() {
       await refresh();
     }),
 
+    // Only new income is split by the new percentages; history keeps its snapshots.
+    onSaveRules: action("Saving the percentages", async (percents) => {
+      const res = await setAllocationRules(percents);
+      await refresh();
+      return res;
+    }),
+
     onAddCategory: action("Adding the category", async ({ name, kind, targetMinor }) => {
       await addExpenseCategory({ name, kind, targetMinor });
       await refresh();
@@ -189,6 +215,10 @@ function AppShell() {
 
   return (
     <View style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <StatusBar
+        barStyle={mode === "dark" ? "light-content" : "dark-content"}
+        backgroundColor={c.surface}
+      />
       <ScrollView ref={scrollRef} style={s.body} contentContainerStyle={s.bodyContent} keyboardShouldPersistTaps="handled">
         {ready ? <Screen {...props} /> : <Text style={s.loading}>Loading…</Text>}
       </ScrollView>
@@ -205,7 +235,8 @@ function AppShell() {
           </Pressable>
         ))}
       </View>
-      {ready && <TipModal />}
+      {ready && onboarded && <TipModal />}
+      {ready && !onboarded && <Onboarding rules={rules} onDone={finishIntro} />}
     </View>
   );
 }
@@ -213,22 +244,24 @@ function AppShell() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AppShell />
+      <ThemeProvider>
+        <AppShell />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: light.bg },
+const makeStyles = (c) => ({
+  root: { flex: 1, backgroundColor: c.bg },
   body: { flex: 1 },
   bodyContent: { padding: 16, paddingBottom: 32 },
-  loading: { color: light.text2 },
-  err: { flexDirection: "row", alignItems: "center", backgroundColor: "#FEF2F2", borderTopWidth: 1, borderColor: "#FCA5A5", paddingHorizontal: 14, paddingVertical: 10 },
-  errT: { flex: 1, color: light.danger, fontSize: 12, fontWeight: "600" },
-  errX: { color: light.danger, fontSize: 14, paddingLeft: 10 },
-  tabs: { flexDirection: "row", borderTopWidth: 1, borderColor: light.border, backgroundColor: light.surface },
+  loading: { color: c.text2 },
+  err: { flexDirection: "row", alignItems: "center", backgroundColor: c.surface2, borderTopWidth: 1, borderColor: c.danger, paddingHorizontal: 14, paddingVertical: 10 },
+  errT: { flex: 1, color: c.danger, fontSize: 12, fontWeight: "600" },
+  errX: { color: c.danger, fontSize: 14, paddingLeft: 10 },
+  tabs: { flexDirection: "row", borderTopWidth: 1, borderColor: c.border, backgroundColor: c.surface },
   tab: { flex: 1, paddingVertical: 14, paddingHorizontal: 2, alignItems: "center" },
-  on: { borderTopWidth: 2, borderColor: light.primary },
-  t: { color: light.text2, fontWeight: "600", fontSize: 12 },
-  ton: { color: light.text },
+  on: { borderTopWidth: 2, borderColor: c.primary },
+  t: { color: c.text2, fontWeight: "600", fontSize: 12 },
+  ton: { color: c.text },
 });

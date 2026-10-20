@@ -55,3 +55,32 @@
 - Rejected: in-place editing of income amounts (silently rewrites set-aside history); hard `DELETE`
   (breaks the outbox/LWW contract and cannot be reconciled by a later pull); undo-toast instead of
   confirm (too easy to miss when four figures move at once).
+
+# ADR-009 Customisable deduction percentages
+- The four deduction percentages (tithes, savings, emergency, community) are editable in
+  **Settings → Deduction percentages**. Values are whole numbers, and the four may total at most 100%.
+- **Spendable is never typed.** The `living` rule is always `100 − sum(deductions)`, rewritten on save,
+  so the buckets and the pot can never disagree.
+- **Only new income is affected.** Every `income_entries` row keeps the split it was given
+  (ADR-006/008), so a change repaints the labels and the next income, never the past. The Settings card
+  says so, and *Reset to 10 / 15 / 5 / 5* restores the defaults.
+- Labels elsewhere (Home's all-time card, the income ledger, the community bucket) read their
+  percentages from the rules rather than hardcoding them; a customised split must not be contradicted
+  by the copy.
+- Rejected: per-source percentages (deferred by ADR-007), decimal percentages (no practical gain on
+  BIF amounts and it makes the largest-remainder split harder to reason about), and letting the user
+  type the spendable share (it is a derived remainder, not an input).
+
+# ADR-010 Dark theme
+- The body text, surfaces and accents come from one palette: `light` / `dark` in `theme/tokens.ts`.
+  Screens build their styles from a **factory** — `const makeStyles = (c) => ({ … })` resolved by
+  `useThemedStyles(makeStyles)` — instead of creating a static `StyleSheet` at import time, which is
+  what made a runtime toggle impossible before.
+- `ThemeProvider` holds the mode, persists it in SecureStore (`theme`), and repaints by re-running the
+  factories. Layout objects stay identical, so nothing reflows when the theme changes.
+- Accents that shift with the mode (planned-purchase dots, tip-card chips, the community bucket) are
+  read from the active palette rather than hardcoded hex, so a dark screen never shows a light-mode
+  chip.
+- The status bar follows the mode. Rejected: forcing a reload after switching (visible flash and a
+  full data re-read for a cosmetic change), and an OS-level `useColorScheme` only (the user asked for
+  an in-app toggle, which must win over the system setting).

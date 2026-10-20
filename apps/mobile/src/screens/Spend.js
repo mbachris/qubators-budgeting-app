@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
-import { light, formatMoney } from "../theme/tokens";
+import { View, Text, TextInput, Pressable } from "react-native";
+import { formatMoney } from "../theme/tokens";
+import { useTheme, useThemedStyles } from "../theme/ThemeProvider";
 import { periodLabel } from "../lib/period";
 
 const KIND_LABEL = { bill: "Bill", goal: "Planned", daily: "Everyday" };
@@ -11,6 +12,8 @@ export default function Spend({
   onSaveExpense, onAddCategory, onPayBill, onAddToGoal, onDeleteExpense, onSetTarget,
   onDeleteCategory,
 }) {
+  const { c } = useTheme();
+  const s = useThemedStyles(makeStyles);
   const daily = categories.filter((c) => c.kind === "daily");
   const [amounts, setAmounts] = useState({});
   const [amount, setAmount] = useState("");
@@ -99,7 +102,7 @@ export default function Spend({
           <View key={g.id} style={s.card}>
             <View style={s.rowBetween}>
               <Text style={s.t}>{g.name}</Text>
-              <Text style={[s.due, done && { color: light.primary, fontWeight: "700" }]}>
+              <Text style={[s.due, done && { color: c.primary, fontWeight: "700" }]}>
                 {done ? "target reached ✓" : target > 0 ? `${pct}%` : `${g.payments} payment${g.payments === 1 ? "" : "s"}`}
               </Text>
             </View>
@@ -111,7 +114,7 @@ export default function Spend({
             {target > 0 && (
               <>
                 <View style={s.barTrack}>
-                  <View style={[s.barFill, done && { backgroundColor: light.primary }, { width: `${pct}%` }]} />
+                  <View style={[s.barFill, done && { backgroundColor: c.primary }, { width: `${pct}%` }]} />
                 </View>
                 <Text style={s.due}>
                   {done ? "Plan complete." : `${formatMoney(remaining)} still to go`}
@@ -404,45 +407,45 @@ export default function Spend({
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (c) => ({
   h: { fontSize: 20, fontWeight: "600" },
   section: { fontSize: 16, fontWeight: "700", marginTop: 22 },
-  m: { color: light.text2, fontSize: 12, marginTop: 2 },
-  sub: { color: light.text2, marginTop: 8 },
-  label: { fontSize: 13, fontWeight: "700", marginTop: 16, color: light.text2 },
-  warn: { color: light.accent, fontSize: 12, marginTop: 6, fontWeight: "600" },
-  card: { backgroundColor: light.surface, borderWidth: 1, borderColor: light.border, borderRadius: 16, padding: 12, marginTop: 8 },
+  m: { color: c.text2, fontSize: 12, marginTop: 2 },
+  sub: { color: c.text2, marginTop: 8 },
+  label: { fontSize: 13, fontWeight: "700", marginTop: 16, color: c.text2 },
+  warn: { color: c.accent, fontSize: 12, marginTop: 6, fontWeight: "600" },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 16, padding: 12, marginTop: 8 },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   t: { fontWeight: "600" },
-  due: { color: light.text2, fontSize: 12, marginTop: 2 },
+  due: { color: c.text2, fontSize: 12, marginTop: 2 },
   moneyBig: { fontSize: 20, fontWeight: "800", fontVariant: ["tabular-nums"], marginTop: 4 },
-  moneyOf: { fontSize: 13, fontWeight: "600", color: light.text2 },
-  barTrack: { height: 8, backgroundColor: light.surface2, borderRadius: 999, marginTop: 8, overflow: "hidden" },
-  barFill: { height: 8, borderRadius: 999, backgroundColor: light.accent },
+  moneyOf: { fontSize: 13, fontWeight: "600", color: c.text2 },
+  barTrack: { height: 8, backgroundColor: c.surface2, borderRadius: 999, marginTop: 8, overflow: "hidden" },
+  barFill: { height: 8, borderRadius: 999, backgroundColor: c.accent },
   payRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
-  in: { height: 48, borderWidth: 1, borderColor: light.border, borderRadius: 12, paddingHorizontal: 14, marginTop: 8, backgroundColor: light.surface },
+  in: { height: 48, borderWidth: 1, borderColor: c.border, borderRadius: 12, paddingHorizontal: 14, marginTop: 8, backgroundColor: c.surface },
   inPay: { flex: 1, marginTop: 0, fontVariant: ["tabular-nums"] },
   chips: { flexDirection: "row", flexWrap: "wrap", marginTop: 8 },
-  chip: { borderWidth: 1, borderColor: light.border, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, marginRight: 6, marginBottom: 6, backgroundColor: light.surface },
-  chipOn: { backgroundColor: light.primary, borderColor: light.primary },
-  chipT: { color: light.text, fontSize: 13 },
+  chip: { borderWidth: 1, borderColor: c.border, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, marginRight: 6, marginBottom: 6, backgroundColor: c.surface },
+  chipOn: { backgroundColor: c.primary, borderColor: c.primary },
+  chipT: { color: c.text, fontSize: 13 },
   chipTOn: { color: "#fff", fontWeight: "700" },
-  btn: { backgroundColor: light.primary, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center" },
+  btn: { backgroundColor: c.primary, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center" },
   btnPay: { width: 84, marginLeft: 8 },
-  btnGhost: { borderWidth: 1, borderColor: light.border, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", marginTop: 12, backgroundColor: light.surface },
+  btnGhost: { borderWidth: 1, borderColor: c.border, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", marginTop: 12, backgroundColor: c.surface },
   off: { opacity: 0.4 },
   bt: { color: "#fff", fontWeight: "700" },
-  btGhost: { color: light.text, fontWeight: "700" },
-  line: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderColor: light.border },
+  btGhost: { color: c.text, fontWeight: "700" },
+  line: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderColor: c.border },
   lineT: { fontWeight: "600" },
   money: { fontVariant: ["tabular-nums"], fontWeight: "600" },
   del: { marginLeft: 10, paddingHorizontal: 4 },
-  delT: { color: light.text3, fontSize: 16 },
+  delT: { color: c.text3, fontSize: 16 },
   targetRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 },
-  planFoot: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderColor: light.border },
-  tFix: { color: light.info, fontWeight: "700", fontSize: 12 },
-  tDel: { color: light.danger, fontWeight: "700", fontSize: 14, marginLeft: 14 },
-  tCancel: { color: light.text2, fontWeight: "700", fontSize: 12, marginRight: 14 },
-  tRemove: { color: light.danger, fontWeight: "700", fontSize: 12 },
-  tWarn: { flex: 1, color: light.danger, fontSize: 12, lineHeight: 16 },
+  planFoot: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderColor: c.border },
+  tFix: { color: c.info, fontWeight: "700", fontSize: 12 },
+  tDel: { color: c.danger, fontWeight: "700", fontSize: 14, marginLeft: 14 },
+  tCancel: { color: c.text2, fontWeight: "700", fontSize: 12, marginRight: 14 },
+  tRemove: { color: c.danger, fontWeight: "700", fontSize: 12 },
+  tWarn: { flex: 1, color: c.danger, fontSize: 12, lineHeight: 16 },
 });

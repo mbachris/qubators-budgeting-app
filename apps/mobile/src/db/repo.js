@@ -20,6 +20,40 @@ export async function listAllocationRules() {
   );
 }
 
+// Changing the percentages affects NEW income only: every entry keeps the split it
+// was given, so the past never moves. `living` is always the remainder, never typed.
+export async function setAllocationRules(percents) {
+  const db = await getDB();
+  const t = now();
+  const rules = await listAllocationRules();
+  const fixed = rules.filter((r) => r.kind !== "living");
+  const living = rules.find((r) => r.kind === "living");
+  if (!living) throw new Error("the spendable rule is missing — reset local data");
+
+  const next = fixed.map((r) => ({
+    id: r.id,
+    percent: Math.round(Number(percents?.[r.id])),
+  }));
+  for (let i = 0; i < next.length; i++) {
+    const p = next[i].percent;
+    if (!Number.isFinite(p) || p < 0 || p > 100) {
+      throw new Error(`enter a percentage between 0 and 100 for ${fixed[i].name}`);
+    }
+  }
+  const sum = next.reduce((a, r) => a + r.percent, 0);
+  if (sum > 100) throw new Error(`the deductions add up to ${sum}% — leave something to spend`);
+  const rest = 100 - sum;
+
+  for (const r of next) {
+    await run(db, "UPDATE allocation_rules SET percent=?, updated_at=? WHERE id=?", r.percent, t, r.id);
+    await enqueue("allocation_rules", r.id, "upsert", { id: r.id, percent: r.percent, updatedAt: t });
+  }
+  await run(db, "UPDATE allocation_rules SET percent=?, updated_at=? WHERE id=?", rest, t, living.id);
+  await enqueue("allocation_rules", living.id, "upsert", { id: living.id, percent: rest, updatedAt: t });
+
+  return { percents: next, spendable: rest };
+}
+
 // -------------------------------------------------------------- income sources
 // Attribution only: the essentials come off every income whatever the source, so
 // this list answers "which source carried the month" and "what came out of it".

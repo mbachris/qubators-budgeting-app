@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
-import { light, formatMoney, categoryColor } from "../theme/tokens";
+import { View, Text, TextInput, Pressable } from "react-native";
+import { formatMoney, categoryColor } from "../theme/tokens";
+import { useTheme, useThemedStyles } from "../theme/ThemeProvider";
 import { allocateIncome } from "../domain/allocate";
 import { currentPeriod, periodLabel, shiftPeriod } from "../lib/period";
 
@@ -8,6 +9,8 @@ export default function AddIncome({
   rules = [], initialPeriod, period, incomes = [], sources = [], sourceTotals = [],
   sourceLifetime = [], onSaveIncome, onAddSource, onDeleteIncome, scrollToTop, go,
 }) {
+  const { mode } = useTheme();
+  const s = useThemedStyles(makeStyles);
   const [val, setVal] = useState("");
   const [note, setNote] = useState("");
   const [sourceId, setSourceId] = useState(null);
@@ -27,6 +30,8 @@ export default function AddIncome({
   try { split = rules.length ? allocateIncome(minor, rules) : []; } catch { split = []; }
   const label = (p) => (p.kind === "living" ? "Spendable (Living)" : p.name);
   const isCurrent = incomePeriod === currentPeriod();
+  const deductions = rules.filter((r) => r.kind !== "living");
+  const livingPct = rules.find((r) => r.kind === "living")?.percent ?? 0;
 
   const chosen = sources.find((s) => s.id === sourceId) ?? null;
   const sum = (rows, key) => rows.reduce((a, r) => a + (r[key] ?? 0), 0);
@@ -65,8 +70,9 @@ export default function AddIncome({
     <View>
       <Text style={s.h}>Add income</Text>
       <Text style={s.m}>
-        Deductions are taken straight away, from every source: tithes 10%, savings 15%, emergency 5%,
-        community 5%. The remaining 65% is the money you manage that month.
+        Deductions are taken straight away, from every source:{" "}
+        {deductions.map((r) => `${r.name} ${r.percent}%`).join(" · ")}. The remaining {livingPct}% is the
+        money you manage that month.
       </Text>
 
       <Text style={s.label}>Where did it come from?</Text>
@@ -155,7 +161,7 @@ export default function AddIncome({
           <Text style={s.t}>Set aside now ─ {chosen ? chosen.name : "Other"}</Text>
           {split.map((p) => (
             <View key={p.id} style={s.row}>
-              <View style={[s.dot, { backgroundColor: categoryColor(p.kind) }]} />
+              <View style={[s.dot, { backgroundColor: categoryColor(p.kind, mode) }]} />
               <Text style={[s.rName, p.kind === "living" && s.strong]}>{label(p)}</Text>
               <Text style={[s.rVal, p.kind === "living" && s.strong]}>
                 {p.kind === "living" ? "" : "−"}{formatMoney(p.amountMinor)}
@@ -220,22 +226,17 @@ export default function AddIncome({
             <Text style={[s.rName, s.strong]}>Total in</Text>
             <Text style={[s.rVal, s.strong]}>{formatMoney(monthTotal)}</Text>
           </View>
-          <View style={s.row}>
-            <Text style={s.rName}>Set aside — tithes 10%</Text>
-            <Text style={s.rVal}>{formatMoney(sum(sourceTotals, "titheMinor"))}</Text>
-          </View>
-          <View style={s.row}>
-            <Text style={s.rName}>Set aside — savings 15%</Text>
-            <Text style={s.rVal}>{formatMoney(sum(sourceTotals, "savingsMinor"))}</Text>
-          </View>
-          <View style={s.row}>
-            <Text style={s.rName}>Set aside — emergency 5%</Text>
-            <Text style={s.rVal}>{formatMoney(sum(sourceTotals, "emergencyMinor"))}</Text>
-          </View>
-          <View style={s.row}>
-            <Text style={s.rName}>Set aside — community 5%</Text>
-            <Text style={s.rVal}>{formatMoney(sum(sourceTotals, "communityMinor"))}</Text>
-          </View>
+          {deductions.map((r) => (
+            <View key={r.id} style={s.row}>
+              <Text style={s.rName}>Set aside — {r.name} ({r.percent}%)</Text>
+              <Text style={s.rVal}>
+                {formatMoney(sum(sourceTotals, {
+                  tithe: "titheMinor", saving: "savingsMinor",
+                  emergency: "emergencyMinor", community: "communityMinor",
+                }[r.kind]))}
+              </Text>
+            </View>
+          ))}
           <View style={s.row}>
             <Text style={[s.rName, s.strong]}>Spendable</Text>
             <Text style={[s.rVal, s.strong]}>{formatMoney(sum(sourceTotals, "spendableMinor"))}</Text>
@@ -327,53 +328,53 @@ export default function AddIncome({
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (c) => ({
   h: { fontSize: 20, fontWeight: "600" },
-  m: { color: light.text2, marginTop: 4 },
+  m: { color: c.text2, marginTop: 4 },
   section: { fontSize: 16, fontWeight: "700", marginTop: 26 },
-  label: { color: light.text2, marginTop: 14 },
-  due: { color: light.text2, fontSize: 12 },
-  in: { height: 52, borderWidth: 1, borderColor: light.border, borderRadius: 12, paddingHorizontal: 14, fontSize: 20, marginTop: 6, fontVariant: ["tabular-nums"], backgroundColor: light.surface },
-  inSmall: { height: 46, borderWidth: 1, borderColor: light.border, borderRadius: 12, paddingHorizontal: 14, marginTop: 6, backgroundColor: light.surface },
+  label: { color: c.text2, marginTop: 14 },
+  due: { color: c.text2, fontSize: 12 },
+  in: { height: 52, borderWidth: 1, borderColor: c.border, borderRadius: 12, paddingHorizontal: 14, fontSize: 20, marginTop: 6, fontVariant: ["tabular-nums"], backgroundColor: c.surface },
+  inSmall: { height: 46, borderWidth: 1, borderColor: c.border, borderRadius: 12, paddingHorizontal: 14, marginTop: 6, backgroundColor: c.surface },
   inPay: { flex: 1, marginTop: 0 },
   chips: { flexDirection: "row", flexWrap: "wrap", marginTop: 8 },
-  chip: { borderWidth: 1, borderColor: light.border, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9, marginRight: 6, marginBottom: 6, backgroundColor: light.surface },
-  chipOn: { backgroundColor: light.primary, borderColor: light.primary },
-  chipT: { color: light.text, fontSize: 13 },
+  chip: { borderWidth: 1, borderColor: c.border, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9, marginRight: 6, marginBottom: 6, backgroundColor: c.surface },
+  chipOn: { backgroundColor: c.primary, borderColor: c.primary },
+  chipT: { color: c.text, fontSize: 13 },
   chipTOn: { color: "#fff", fontWeight: "700" },
   payRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
-  btnSmall: { backgroundColor: light.primary, borderRadius: 12, height: 46, paddingHorizontal: 18, alignItems: "center", justifyContent: "center", marginLeft: 8 },
+  btnSmall: { backgroundColor: c.primary, borderRadius: 12, height: 46, paddingHorizontal: 18, alignItems: "center", justifyContent: "center", marginLeft: 8 },
   monthRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 6 },
-  nav: { width: 44, height: 44, borderRadius: 999, borderWidth: 1, borderColor: light.border, alignItems: "center", justifyContent: "center", backgroundColor: light.surface },
-  navT: { fontSize: 22, color: light.text },
+  nav: { width: 44, height: 44, borderRadius: 999, borderWidth: 1, borderColor: c.border, alignItems: "center", justifyContent: "center", backgroundColor: c.surface },
+  navT: { fontSize: 22, color: c.text },
   month: { fontSize: 18, fontWeight: "700" },
-  card: { backgroundColor: light.surface, borderWidth: 1, borderColor: light.border, borderRadius: 16, padding: 12, marginTop: 12 },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 16, padding: 12, marginTop: 12 },
   t: { fontWeight: "600", marginBottom: 4 },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: 6 },
   dot: { width: 10, height: 10, borderRadius: 999, marginRight: 8 },
-  rName: { flex: 1, color: light.text2 },
-  rVal: { fontVariant: ["tabular-nums"], color: light.text2 },
-  strong: { color: light.text, fontWeight: "700" },
-  hr: { height: 1, backgroundColor: light.border, marginVertical: 4 },
-  btn: { backgroundColor: light.primary, borderRadius: 12, height: 52, alignItems: "center", justifyContent: "center", marginTop: 16 },
-  btnGhost: { borderWidth: 1, borderColor: light.border, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", marginTop: 24, backgroundColor: light.surface },
-  btGhost: { color: light.text, fontWeight: "700" },
+  rName: { flex: 1, color: c.text2 },
+  rVal: { fontVariant: ["tabular-nums"], color: c.text2 },
+  strong: { color: c.text, fontWeight: "700" },
+  hr: { height: 1, backgroundColor: c.border, marginVertical: 4 },
+  btn: { backgroundColor: c.primary, borderRadius: 12, height: 52, alignItems: "center", justifyContent: "center", marginTop: 16 },
+  btnGhost: { borderWidth: 1, borderColor: c.border, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", marginTop: 24, backgroundColor: c.surface },
+  btGhost: { color: c.text, fontWeight: "700" },
   off: { opacity: 0.4 },
   bt: { color: "#fff", fontWeight: "700" },
-  line: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderColor: light.border },
+  line: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderColor: c.border },
   lineT: { fontWeight: "600" },
-  moneyBig2: { fontVariant: ["tabular-nums"], fontWeight: "700", color: light.primary },
-  entry: { borderBottomWidth: 1, borderColor: light.border, paddingVertical: 8 },
-  entryOn: { backgroundColor: light.surface, borderRadius: 12, paddingHorizontal: 8 },
+  moneyBig2: { fontVariant: ["tabular-nums"], fontWeight: "700", color: c.primary },
+  entry: { borderBottomWidth: 1, borderColor: c.border, paddingVertical: 8 },
+  entryOn: { backgroundColor: c.surface, borderRadius: 12, paddingHorizontal: 8 },
   entryRow: { flexDirection: "row", alignItems: "center" },
   entryTap: { flex: 1, paddingVertical: 4, paddingRight: 8 },
   entryActs: { flexDirection: "row", alignItems: "center", marginRight: 10 },
-  fixT: { color: light.info, fontWeight: "700", fontSize: 13, marginRight: 14 },
-  delT: { color: light.danger, fontWeight: "700", fontSize: 15 },
-  cancelT: { color: light.text2, fontWeight: "700", fontSize: 13, marginRight: 14 },
-  removeT: { color: light.danger, fontWeight: "700", fontSize: 13 },
-  warnT: { color: light.danger, fontSize: 12, marginTop: 6, lineHeight: 17 },
+  fixT: { color: c.info, fontWeight: "700", fontSize: 13, marginRight: 14 },
+  delT: { color: c.danger, fontWeight: "700", fontSize: 15 },
+  cancelT: { color: c.text2, fontWeight: "700", fontSize: 13, marginRight: 14 },
+  removeT: { color: c.danger, fontWeight: "700", fontSize: 13 },
+  warnT: { color: c.danger, fontSize: 12, marginTop: 6, lineHeight: 17 },
   fixBar: { flexDirection: "row", alignItems: "center", backgroundColor: "#EFF6FF", borderWidth: 1, borderColor: "#BFDBFE", borderRadius: 12, padding: 10, marginTop: 14 },
-  fixBarT: { flex: 1, color: light.text, fontSize: 12, lineHeight: 17 },
-  fixBarX: { color: light.info, fontWeight: "700", fontSize: 12, paddingLeft: 10 },
+  fixBarT: { flex: 1, color: c.text, fontSize: 12, lineHeight: 17 },
+  fixBarX: { color: c.info, fontWeight: "700", fontSize: 12, paddingLeft: 10 },
 });

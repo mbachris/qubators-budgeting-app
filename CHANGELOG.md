@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased — 1.0.0: your own percentages, a first-run intro, an identity, a dark theme
+
+- **Deduction percentages are yours to set.** *Settings → Deduction percentages* takes the four values
+  (tithes, savings, emergency, community) as whole numbers; *Spendable (Living)* is the remainder and is
+  never typed. The four may total at most 100% — above that the save is refused with a message rather
+  than quietly producing a negative pot. **Only new income is affected**: every existing entry keeps the
+  split it was given, so changing a percentage never rewrites the past. *Reset to 10 / 15 / 5 / 5*
+  restores the defaults. Every label that used to say "10%", "15%", "5%" and "65%" now reads the live
+  rules instead — Home's all-time card, the income ledger, the community bucket and the empty-state copy
+  cannot contradict a customised split.
+- **A first-run intro, three screens, shown once.** *Income is divided the moment it arrives* (the four
+  deductions with real amounts on a sample 100,000), *Only what is left is yours to spend* (the pot, and
+  that months keep their own statement), *The essentials are already handled* (community giving is the
+  one action; everything works offline with no account). Skippable, and replayable from
+  *Settings → Show the intro again*. The tip card is suppressed while it is open.
+- **An app identity.** A generated icon — a ring with one slice lifted out of it, i.e. part of every
+  income set aside — plus an Android adaptive icon (mark inside the 66% safe zone, green background) and
+  a splash mark on the same green. `tools/make-icons.cjs` draws them from the app's own palette, so the
+  mark can be regenerated rather than redrawn by hand.
+- **A dark theme.** *Settings → Appearance* switches the whole app between the light and dark palettes
+  and remembers the choice on the device; the status bar follows. Screens now build their styles from
+  the active palette instead of a static sheet created at import time, which is what made a runtime
+  toggle possible. Accents (plan dots, tip chips, the community bucket) come from the active palette, so
+  no screen shows a light-mode chip in the dark.
+- App version **1.0.0**, `versionCode` 3; `expo-splash-screen` added for the splash config.
+
 ## Unreleased — remove & fix an income entry, remove a gift
 
 - **Income entries can be removed.** Each row in *Entries in <month>* has a `✕`; removing asks for a

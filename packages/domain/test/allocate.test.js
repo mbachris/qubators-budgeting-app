@@ -29,6 +29,25 @@ test("custom rules + rename supported", () => {
   assert.equal(sum(rows), 10001);
 });
 
+test("custom percentages 12/18/5/5 leave 60% spendable", () => {
+  const rules = [
+    { id: "tithe", name: "Tithes / Giving", percent: 12, kind: "tithe" },
+    { id: "savings", name: "Savings & Wealth", percent: 18, kind: "saving" },
+    { id: "emergency", name: "Emergency fund", percent: 5, kind: "emergency" },
+    { id: "community", name: "Community Impact", percent: 5, kind: "community" },
+    { id: "living", name: "Spendable (Living)", percent: 60, kind: "living" },
+  ];
+  const rows = allocateIncome(200000, rules);
+  assert.deepEqual(byId(rows), { tithe: 24000, savings: 36000, emergency: 10000, community: 10000, living: 120000 });
+  assert.equal(rows.find((r) => r.kind === "living").percent, 60);
+});
+
+test("all deductions at 0 → everything is spendable", () => {
+  const rules = DEFAULT_RULES.map((r) => ({ ...r, percent: r.kind === "living" ? 100 : 0 }));
+  const rows = allocateIncome(12345, rules);
+  assert.deepEqual(byId(rows), { tithe: 0, savings: 0, emergency: 0, community: 0, living: 12345 });
+});
+
 test("rejects sum >100 and missing living", () => {
   assert.throws(() =>
     allocateIncome(100, [

@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
-import { light, formatMoney } from "../theme/tokens";
+import { View, Text, TextInput, Pressable } from "react-native";
+import { formatMoney } from "../theme/tokens";
+import { useThemedStyles } from "../theme/ThemeProvider";
 import { periodLabel } from "../lib/period";
 import { COMMUNITY_CATEGORIES } from "../db/schema";
 
-export default function Community({ period, summary, lifetime, payouts = [], onGive, onDeleteGift, go }) {
+export default function Community({ period, summary, lifetime, payouts = [], rules = [], onGive, onDeleteGift, go }) {
+  const s = useThemedStyles(makeStyles);
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -21,7 +23,12 @@ export default function Community({ period, summary, lifetime, payouts = [], onG
       <Text style={s.h}>Community giving</Text>
 
       <View style={s.card}>
-        <Text style={s.t}>Community Impact bucket (5%)</Text>
+        <Text style={s.t}>
+          Community Impact bucket
+          {rules.find((r) => r.kind === "community")
+            ? ` (${rules.find((r) => r.kind === "community").percent}%)`
+            : ""}
+        </Text>
         <Text style={s.m}>
           Deducted from income in {periodLabel(period)}: {formatMoney(summary?.communityMinor ?? 0)}
         </Text>
@@ -118,30 +125,30 @@ export default function Community({ period, summary, lifetime, payouts = [], onG
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (c) => ({
   h: { fontSize: 20, fontWeight: "600" },
   section: { fontSize: 16, fontWeight: "700", marginTop: 22 },
-  m: { color: light.text2, marginTop: 2 },
-  sub: { color: light.text2, marginTop: 8 },
-  link: { color: light.info, marginTop: 8, fontWeight: "600" },
-  card: { backgroundColor: light.surface, borderWidth: 1, borderColor: light.border, borderRadius: 16, padding: 12, marginTop: 8 },
+  m: { color: c.text2, marginTop: 2 },
+  sub: { color: c.text2, marginTop: 8 },
+  link: { color: c.info, marginTop: 8, fontWeight: "600" },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 16, padding: 12, marginTop: 8 },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   t: { fontWeight: "600" },
   moneySmall: { fontVariant: ["tabular-nums"], fontWeight: "600", fontSize: 13 },
-  in: { height: 48, borderWidth: 1, borderColor: light.border, borderRadius: 12, paddingHorizontal: 14, marginTop: 6, backgroundColor: light.surface, fontVariant: ["tabular-nums"] },
-  btn: { alignSelf: "flex-start", backgroundColor: light.accent, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10, marginTop: 10 },
+  in: { height: 48, borderWidth: 1, borderColor: c.border, borderRadius: 12, paddingHorizontal: 14, marginTop: 6, backgroundColor: c.surface, fontVariant: ["tabular-nums"] },
+  btn: { alignSelf: "flex-start", backgroundColor: c.accent, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10, marginTop: 10 },
   off: { opacity: 0.4 },
   bt: { color: "#fff", fontWeight: "700" },
-  btnGhost: { borderWidth: 1, borderColor: light.border, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", marginTop: 20, backgroundColor: light.surface },
-  btGhost: { color: light.text, fontWeight: "700" },
-  line: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderColor: light.border },
-  lineT: { color: light.text2 },
-  gift: { borderBottomWidth: 1, borderColor: light.border, paddingVertical: 8 },
+  btnGhost: { borderWidth: 1, borderColor: c.border, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", marginTop: 20, backgroundColor: c.surface },
+  btGhost: { color: c.text, fontWeight: "700" },
+  line: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderColor: c.border },
+  lineT: { color: c.text2 },
+  gift: { borderBottomWidth: 1, borderColor: c.border, paddingVertical: 8 },
   giftRow: { flexDirection: "row", alignItems: "center" },
   acts: { flexDirection: "row", alignItems: "center" },
   xWrap: { marginLeft: 12 },
-  delT: { color: light.danger, fontWeight: "700", fontSize: 15 },
-  cancelT: { color: light.text2, fontWeight: "700", fontSize: 13, marginRight: 14 },
-  removeT: { color: light.danger, fontWeight: "700", fontSize: 13 },
-  warnT: { color: light.danger, fontSize: 12, marginTop: 6, lineHeight: 17 },
+  delT: { color: c.danger, fontWeight: "700", fontSize: 15 },
+  cancelT: { color: c.text2, fontWeight: "700", fontSize: 13, marginRight: 14 },
+  removeT: { color: c.danger, fontWeight: "700", fontSize: 13 },
+  warnT: { color: c.danger, fontSize: 12, marginTop: 6, lineHeight: 17 },
 });

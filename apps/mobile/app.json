@@ -1,19 +1,34 @@
 {
   "name": "Qubators",
   "slug": "qubators-budgeting-app",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "orientation": "portrait",
   "scheme": "qubators",
   "platforms": [
     "android"
   ],
+  "icon": "./assets/icon.png",
+  "userInterfaceStyle": "automatic",
   "android": {
     "package": "com.qubators.budgeting",
-    "versionCode": 1
+    "versionCode": 3,
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/adaptive-icon.png",
+      "backgroundColor": "#16A34A"
+    }
   },
   "plugins": [
     "expo-sqlite",
-    "expo-secure-store"
+    "expo-secure-store",
+    [
+      "expo-splash-screen",
+      {
+        "image": "./assets/splash-icon.png",
+        "imageWidth": 200,
+        "resizeMode": "contain",
+        "backgroundColor": "#16A34A"
+      }
+    ]
   ],
   "extra": {
     "eas": {

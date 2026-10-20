@@ -1,5 +1,6 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import { light, formatMoney, categoryColor } from "../theme/tokens";
+import { View, Text, Pressable } from "react-native";
+import { formatMoney, categoryColor } from "../theme/tokens";
+import { useTheme, useThemedStyles } from "../theme/ThemeProvider";
 import { periodLabel, shiftPeriod, currentPeriod } from "../lib/period";
 
 const KIND_LABEL = {
@@ -16,6 +17,8 @@ export default function Home({
   period, summary, bills, goals = [], rules = [], categoryTotals = [], expenses = [], lifetime,
   payouts = [], sourceTotals = [], pending = 0, online, setPeriod, go, onDeleteExpense,
 }) {
+  const { c, mode } = useTheme();
+  const s = useThemedStyles(makeStyles);
   const cur = currentPeriod();
   const isCurrent = period === cur;
   const badge = !online
@@ -28,6 +31,7 @@ export default function Home({
   const over = spent > spendable && spendable > 0;
   const available = spendable - spent;
   const maxCat = Math.max(1, ...categoryTotals.map((c) => c.spentMinor));
+  const pctOf = (kind) => rules.find((r) => r.kind === kind)?.percent ?? 0;
 
   const amountFor = (kind) => ({
     tithe: summary?.titheMinor ?? 0,
@@ -68,7 +72,7 @@ export default function Home({
       {/* Hero: the number the user acts on. */}
       <View style={s.hero}>
         <Text style={s.heroLabel}>Available for expenditure</Text>
-        <Text style={[s.heroValue, over && { color: light.danger }]}>
+        <Text style={[s.heroValue, over && { color: c.danger }]}>
           {formatMoney(Math.abs(available))}
         </Text>
         <Text style={s.heroNote}>{over ? "over budget by" : "still available this month"}</Text>
@@ -84,7 +88,7 @@ export default function Home({
         </View>
 
         <View style={s.barTrack}>
-          <View style={[s.barFill, over && { backgroundColor: light.danger }, { width: `${usedPct}%` }]} />
+          <View style={[s.barFill, over && { backgroundColor: c.danger }, { width: `${usedPct}%` }]} />
         </View>
         <Text style={s.heroFoot}>
           {formatMoney(spent)} spent of {formatMoney(spendable)} spendable ({usedPct}%)
@@ -123,7 +127,7 @@ export default function Home({
           const given = r.kind === "tithe" || r.kind === "saving" || r.kind === "emergency";
           return (
             <View key={r.id} style={s.dedRow}>
-              <View style={[s.dot, { backgroundColor: categoryColor(r.kind) }]} />
+              <View style={[s.dot, { backgroundColor: categoryColor(r.kind, mode) }]} />
               <View style={{ flex: 1 }}>
                 <Text style={s.dedName}>
                   {KIND_LABEL[r.kind] ?? r.name} ({r.percent}%)
@@ -202,7 +206,7 @@ export default function Home({
                   {target > 0 ? (
                     <>
                       <View style={s.barTrack}>
-                        <View style={[s.barFill, { width: `${pct}%`, backgroundColor: light.accent }]} />
+                        <View style={[s.barFill, { width: `${pct}%`, backgroundColor: c.accent }]} />
                       </View>
                       <Text style={s.hint}>
                         {g.spentMinor >= target
@@ -270,10 +274,10 @@ export default function Home({
             <Row label="Total spent" value={`− ${formatMoney(lifetime.spentMinor)}`} />
             <Row label="Available for expenditure" value={formatMoney(lifetime.spendableLeft)} strong />
             <View style={s.hr} />
-            <Row label="Tithes given (10%)" value={formatMoney(lifetime.tithePaid)} />
-            <Row label="Savings given (15%)" value={formatMoney(lifetime.savingsGiven)} />
-            <Row label="Emergency fund (5%)" value={formatMoney(lifetime.emergencyGiven)} />
-            <Row label="Community given (5%)" value={formatMoney(lifetime.communityGiven)} />
+            <Row label={`Tithes given (${pctOf("tithe")}%)`} value={formatMoney(lifetime.tithePaid)} />
+            <Row label={`Savings given (${pctOf("saving")}%)`} value={formatMoney(lifetime.savingsGiven)} />
+            <Row label={`Emergency fund (${pctOf("emergency")}%)`} value={formatMoney(lifetime.emergencyGiven)} />
+            <Row label={`Community given (${pctOf("community")}%)`} value={formatMoney(lifetime.communityGiven)} />
             <Row label="Community remaining" value={formatMoney(lifetime.communityRemaining)} />
             <Text style={s.hint}>
               Ceremonies {formatMoney(lifetime.communityByCategory?.ceremonies ?? 0)} •{" "}
@@ -285,8 +289,9 @@ export default function Home({
 
       {!summary?.incomeCount && (
         <Text style={s.sub}>
-          No income recorded for {periodLabel(period)}. Add income and it is split straight away: 10%
-          tithes, 15% savings, 5% emergency, 5% community — the remaining 65% is what you spend.
+          No income recorded for {periodLabel(period)}. Add income and it is split straight away:{" "}
+          {rules.filter((r) => r.kind !== "living").map((r) => `${r.percent}% ${r.name.toLowerCase()}`).join(", ")}
+          {" "}— the remaining {rules.find((r) => r.kind === "living")?.percent ?? 0}% is what you spend.
         </Text>
       )}
     </View>
@@ -294,6 +299,7 @@ export default function Home({
 }
 
 function Stat({ label, value }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.stat}>
       <Text style={s.statLabel}>{label}</Text>
@@ -303,6 +309,7 @@ function Stat({ label, value }) {
 }
 
 function Row({ label, value, strong }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.rowBetween}>
       <Text style={[s.rowLabel, strong && s.rowStrong]}>{label}</Text>
@@ -311,56 +318,56 @@ function Row({ label, value, strong }) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (c) => ({
   badge: { alignSelf: "flex-start", backgroundColor: "#F1F5F9", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, fontSize: 12, fontWeight: "700" },
   monthRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
-  nav: { width: 44, height: 44, borderRadius: 999, borderWidth: 1, borderColor: light.border, alignItems: "center", justifyContent: "center", backgroundColor: light.surface },
+  nav: { width: 44, height: 44, borderRadius: 999, borderWidth: 1, borderColor: c.border, alignItems: "center", justifyContent: "center", backgroundColor: c.surface },
   navOff: { opacity: 0.35 },
-  navT: { fontSize: 22, color: light.text },
+  navT: { fontSize: 22, color: c.text },
   month: { fontSize: 20, fontWeight: "700" },
-  monthSub: { color: light.text2, fontSize: 12 },
+  monthSub: { color: c.text2, fontSize: 12 },
 
-  hero: { backgroundColor: light.surface, borderWidth: 2, borderColor: light.primary, borderRadius: 20, padding: 16, marginTop: 14 },
-  heroLabel: { color: light.text2, fontWeight: "800", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.6 },
-  heroValue: { fontSize: 34, fontWeight: "800", fontVariant: ["tabular-nums"], marginTop: 6, color: light.primary },
-  heroNote: { color: light.text2, fontSize: 13, marginTop: 2 },
+  hero: { backgroundColor: c.surface, borderWidth: 2, borderColor: c.primary, borderRadius: 20, padding: 16, marginTop: 14 },
+  heroLabel: { color: c.text2, fontWeight: "800", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.6 },
+  heroValue: { fontSize: 34, fontWeight: "800", fontVariant: ["tabular-nums"], marginTop: 6, color: c.primary },
+  heroNote: { color: c.text2, fontSize: 13, marginTop: 2 },
   heroGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 12 },
   stat: { width: "50%", paddingVertical: 6 },
-  statLabel: { color: light.text2, fontSize: 12 },
+  statLabel: { color: c.text2, fontSize: 12 },
   statValue: { fontWeight: "700", fontVariant: ["tabular-nums"], marginTop: 2 },
-  barTrack: { height: 8, backgroundColor: light.surface2, borderRadius: 999, marginTop: 12, overflow: "hidden" },
-  barFill: { height: 8, borderRadius: 999, backgroundColor: light.primary },
-  heroFoot: { color: light.text2, fontSize: 12, marginTop: 8 },
+  barTrack: { height: 8, backgroundColor: c.surface2, borderRadius: 999, marginTop: 12, overflow: "hidden" },
+  barFill: { height: 8, borderRadius: 999, backgroundColor: c.primary },
+  heroFoot: { color: c.text2, fontSize: 12, marginTop: 8 },
 
   h: { fontSize: 18, fontWeight: "600", marginTop: 20 },
-  card: { backgroundColor: light.surface, borderWidth: 1, borderColor: light.border, borderRadius: 16, padding: 12, marginTop: 8 },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 16, padding: 12, marginTop: 8 },
   t: { fontWeight: "600" },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  rowLabel: { color: light.text2, flexShrink: 1, paddingRight: 8 },
-  rowStrong: { fontWeight: "700", color: light.text },
+  rowLabel: { color: c.text2, flexShrink: 1, paddingRight: 8 },
+  rowStrong: { fontWeight: "700", color: c.text },
   money: { fontVariant: ["tabular-nums"], fontWeight: "600" },
-  hr: { height: 1, backgroundColor: light.border, marginVertical: 8 },
-  hint: { color: light.text3, fontSize: 12, marginTop: 10 },
-  m: { color: light.text2, marginTop: 6, fontSize: 12 },
-  sub: { color: light.text2, marginTop: 8 },
+  hr: { height: 1, backgroundColor: c.border, marginVertical: 8 },
+  hint: { color: c.text3, fontSize: 12, marginTop: 10 },
+  m: { color: c.text2, marginTop: 6, fontSize: 12 },
+  sub: { color: c.text2, marginTop: 8 },
 
   dedRow: { flexDirection: "row", alignItems: "center", paddingVertical: 8 },
   dot: { width: 10, height: 10, borderRadius: 999, marginRight: 10 },
   dedName: { fontWeight: "600" },
-  dedSub: { color: light.text2, fontSize: 12, marginTop: 2 },
-  miniBtn: { backgroundColor: light.accent, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
+  dedSub: { color: c.text2, fontSize: 12, marginTop: 2 },
+  miniBtn: { backgroundColor: c.accent, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
   miniBtnT: { color: "#fff", fontWeight: "700", fontSize: 13 },
 
   btnRow: { flexDirection: "row", marginTop: 14 },
-  btn: { backgroundColor: light.primary, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center" },
+  btn: { backgroundColor: c.primary, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center" },
   btnHalf: { flex: 1, marginHorizontal: 4 },
   bt: { color: "#fff", fontWeight: "700" },
-  btnGhost: { borderWidth: 1, borderColor: light.border, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", backgroundColor: light.surface },
-  btGhost: { color: light.text, fontWeight: "700" },
-  line: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderColor: light.border },
+  btnGhost: { borderWidth: 1, borderColor: c.border, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", backgroundColor: c.surface },
+  btGhost: { color: c.text, fontWeight: "700" },
+  line: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderColor: c.border },
   lineT: { fontWeight: "600" },
-  due: { color: light.text2, fontSize: 12 },
-  paid: { color: light.primary, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  due: { color: c.text2, fontSize: 12 },
+  paid: { color: c.primary, fontWeight: "700", fontVariant: ["tabular-nums"] },
   del: { marginLeft: 10, paddingHorizontal: 4 },
-  delT: { color: light.text3, fontSize: 16 },
+  delT: { color: c.text3, fontSize: 16 },
 });

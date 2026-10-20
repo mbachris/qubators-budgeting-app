@@ -18,8 +18,12 @@ Source: `Docs/project_concept.md` — offline-first mobile APK, local storage, a
   planned purchases (`kind='goal'`) hold a car or a trip with its own target and multi-month total;
   income is tagged with its **source** (salary / business / side hustle / gift / other) and the Income tab
   reads as a per-source ledger. Phone schema v6, additive launches (no reset).
-- Remaining: customisable deduction percentages, per-source percentages (deferred), bills reserve
-  (deferred), onboarding, custom icon/splash, dark theme toggle, R2 backup upload.
+- **Model v4 (feedback / v1.0.0)**: the four deduction percentages are editable in Settings
+  (`living` is always the remainder, new income only — ADR-009); a three-screen first-run intro,
+  skippable and replayable; a generated app icon, adaptive icon and splash (`tools/make-icons.cjs`);
+  and a dark theme switch in Settings (ADR-010). Version 1.0.0 / versionCode 3.
+- Remaining: per-source percentages (deferred), bills reserve (deferred), R2 backup upload,
+  delete/edit affordances for bills and everyday categories, `npm run check` gate.
 
 Current state:
 - Local: `Docs/project_concept.md`, `Docs/implementation-plan.md` (this file)
