@@ -3,7 +3,9 @@
 Offline-first budgeting + community impact. Local Vault always on, Cloud Sync optional.
 (Repo and docs still say "Qubators" — that is the project's working name.)
 
-Docs: `Docs/PRD.md` (what the app is today), `Docs/project_concept.md`, `Docs/implementation-plan.md`, `Docs/design-system.md`, `Docs/architecture/ADRs.md`
+**Download the Android app:** [BudgetSafe 1.0.0 APK](https://github.com/mbachris/qubators-budgeting-app/releases/latest) — Android 7+, sideload, no account needed. Product requirements are in [`Docs/PRD.md`](Docs/PRD.md).
+
+Docs: `Docs/project_concept.md` (original vision), `Docs/PRD.md` (what ships today), `Docs/implementation-plan.md`, `Docs/design-system.md`, `Docs/architecture/ADRs.md`
 
 ## Run (local device only, no Vercel)
 1. Install Node 20+ and Docker Desktop.
