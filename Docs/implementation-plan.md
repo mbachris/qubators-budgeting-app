@@ -26,6 +26,8 @@ Source: `Docs/project_concept.md` — offline-first mobile APK, local storage, a
   delete/edit affordances for bills and everyday categories, `npm run check` gate.
 
 Current state:
+- Product requirements: `Docs/PRD.md` — the shipped behaviour of 1.0, the money model as rules, what is
+  deliberately absent, and the open questions.
 - Local: `Docs/project_concept.md`, `Docs/implementation-plan.md` (this file)
 - GitHub `mbachris/qubators-budgeting-app`: `README.md` + `Docs/project_concept.md`
 - Auth: `gh` logged in as `mbachris` (keyring, https) — persistent
